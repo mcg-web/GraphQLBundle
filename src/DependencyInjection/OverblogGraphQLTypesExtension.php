@@ -62,6 +62,12 @@ class OverblogGraphQLTypesExtension extends Extension
         $container->setParameter($this->getAlias().'.config', $config);
     }
 
+    /**
+     * @param array            $configs
+     * @param ContainerBuilder $container
+     *
+     * @internal
+     */
     public function containerPrependExtensionConfig(array $configs, ContainerBuilder $container): void
     {
         $container->setParameter('overblog_graphql_types.classes_map', []);
@@ -89,8 +95,26 @@ class OverblogGraphQLTypesExtension extends Extension
         $this->checkTypesDuplication($typeConfigs);
         // flatten config is a requirement to support inheritance
         $flattenTypeConfig = \array_merge(...$typeConfigs);
+        [$schemas, $types] = $this->splitSchemasAndTypes($flattenTypeConfig);
 
-        $container->prependExtensionConfig($this->getAlias(), $flattenTypeConfig);
+        $container->prependExtensionConfig(Configuration::NAME, ['definitions' => ['schema' => $schemas]]);
+        $container->prependExtensionConfig($this->getAlias(), $types);
+    }
+
+    private function splitSchemasAndTypes(array $flattenTypeConfig): array
+    {
+        $schemas = [];
+        $types = [];
+        foreach ($flattenTypeConfig as $key => $type) {
+            if (isset($type['type']) && 'schema' === $type['type']) {
+                $type['config']['name'] = $type['config']['name'] ?? $key;
+                $schemas[] = $type['config'];
+            } else {
+                $types[$key] = $type;
+            }
+        }
+
+        return [$schemas, $types];
     }
 
     private function typesNeedPreParsing(): array

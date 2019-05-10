@@ -85,7 +85,7 @@ class OverblogGraphQLTypesExtensionTest extends TestCase
      * @param $internalConfigKey
      * @dataProvider internalConfigKeys
      * @expectedException \InvalidArgumentException
-     * @expectedExceptionMessage Don't use internal config keys _object_config, _enum_config, _interface_config, _union_config, _input_object_config, _custom_scalar_config, replace it by "config" instead.
+     * @expectedExceptionMessage Don't use internal config keys _object_config, _enum_config, _interface_config, _union_config, _input_object_config, _custom_scalar_config, _schema_config, replace it by "config" instead.
      */
     public function testInternalConfigKeysShouldNotBeUsed($internalConfigKey): void
     {
@@ -466,6 +466,8 @@ class OverblogGraphQLTypesExtensionTest extends TestCase
             ['_interface_config'],
             ['_union_config'],
             ['_input_object_config'],
+            ['_custom_scalar_config'],
+            ['_schema_config'],
         ];
     }
 

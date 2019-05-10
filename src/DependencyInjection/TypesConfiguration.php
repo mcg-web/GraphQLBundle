@@ -12,13 +12,14 @@ use Symfony\Component\Config\Definition\ConfigurationInterface;
 
 class TypesConfiguration implements ConfigurationInterface
 {
-    private static $types = [
+    private const CONFIG_TYPES = [
         'object',
         'enum',
         'interface',
         'union',
         'input-object',
         'custom-scalar',
+        'schema',
     ];
 
     public function getConfigTreeBuilder()
@@ -30,7 +31,7 @@ class TypesConfiguration implements ConfigurationInterface
             function ($type) {
                 return $this->normalizedConfigTypeKey($type);
             },
-            self::$types
+            self::CONFIG_TYPES
         );
 
         $this->addBeforeNormalization($rootNode);
@@ -86,7 +87,7 @@ class TypesConfiguration implements ConfigurationInterface
                             ->thenInvalid('A valid class name starts with a letter or underscore, followed by any number of letters, numbers, or underscores.')
                         ->end()
                     ->end()
-                    ->enumNode('type')->values(self::$types)->isRequired()->end()
+                    ->enumNode('type')->values(self::CONFIG_TYPES)->isRequired()->end()
                     ->arrayNode(InheritanceProcessor::INHERITS_KEY)
                         ->prototype('scalar')->info('Types to inherit of.')->end()
                     ->end()
@@ -97,6 +98,7 @@ class TypesConfiguration implements ConfigurationInterface
                     ->append(Config\UnionTypeDefinition::create()->getDefinition())
                     ->append(Config\InputObjectTypeDefinition::create()->getDefinition())
                     ->append(Config\CustomScalarTypeDefinition::create()->getDefinition())
+                    ->append(Config\SchemaTypeDefinition::create()->getDefinition())
                     ->variableNode('config')->end()
                 ->end()
                 // _{TYPE}_config is renamed config
@@ -133,7 +135,7 @@ class TypesConfiguration implements ConfigurationInterface
             ;
     }
 
-    private function normalizedConfigTypeKey($type)
+    private function normalizedConfigTypeKey(string $type): string
     {
         return '_'.\str_replace('-', '_', $type).'_config';
     }

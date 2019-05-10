@@ -51,7 +51,7 @@ class OverblogGraphQLExtension extends Extension implements PrependExtensionInte
     {
         $configs = $container->getExtensionConfig($this->getAlias());
         $configs = $container->getParameterBag()->resolveValue($configs);
-        $config = $this->treatConfigs($configs, $container, true);
+        $config = $this->treatConfigs($configs, $container);
 
         /** @var OverblogGraphQLTypesExtension $typesExtension */
         $typesExtension = $container->getExtension($this->getAlias().'_types');
@@ -146,14 +146,10 @@ class OverblogGraphQLExtension extends Extension implements PrependExtensionInte
         }
     }
 
-    private function treatConfigs(array $configs, ContainerBuilder $container, $forceReload = false)
+    private function treatConfigs(array $configs, ContainerBuilder $container)
     {
-        static $config = null;
-
-        if ($forceReload || null === $config) {
-            $configuration = $this->getConfiguration($configs, $container);
-            $config = $this->processConfiguration($configuration, $configs);
-        }
+        $configuration = $this->getConfiguration($configs, $container);
+        $config = $this->processConfiguration($configuration, $configs);
 
         return $config;
     }

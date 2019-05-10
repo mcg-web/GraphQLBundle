@@ -1,3 +1,9 @@
+Schema:
+    type: schema
+    config:
+        query: RootQuery
+        mutation: RootMutation
+
 RootQuery:
     type: object
     config:
