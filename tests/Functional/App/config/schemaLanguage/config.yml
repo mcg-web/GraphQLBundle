@@ -4,12 +4,12 @@ imports:
 overblog_graphql:
     definitions:
         class_namespace: "Overblog\\GraphQLBundle\\SchemaLanguage\\__DEFINITIONS__"
-        schema:
-            query: Query
-            mutation: Mutation
-            resolver_maps:
-                - Overblog\GraphQLBundle\Tests\Functional\App\Resolver\SchemaLanguageQueryResolverMap
-                - Overblog\GraphQLBundle\Tests\Functional\App\Resolver\SchemaLanguageMutationResolverMap
+#        schema:
+#            query: Query
+#            mutation: Mutation
+#            resolver_maps:
+#                - Overblog\GraphQLBundle\Tests\Functional\App\Resolver\SchemaLanguageQueryResolverMap
+#                - Overblog\GraphQLBundle\Tests\Functional\App\Resolver\SchemaLanguageMutationResolverMap
         mappings:
             types:
                 -

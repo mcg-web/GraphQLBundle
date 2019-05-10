@@ -20,6 +20,7 @@ class GraphQLParser implements ParserInterface
         NodeKind::UNION_TYPE_DEFINITION => 'union',
         NodeKind::INPUT_OBJECT_TYPE_DEFINITION => 'inputObject',
         NodeKind::SCALAR_TYPE_DEFINITION => 'customScalar',
+        NodeKind::SCHEMA_DEFINITION => 'schema',
     ];
 
     /**
@@ -42,11 +43,15 @@ class GraphQLParser implements ParserInterface
         }
 
         foreach ($ast->definitions as $typeDef) {
-            if (isset($typeDef->kind) && \in_array($typeDef->kind, \array_keys(self::DEFINITION_TYPE_MAPPING))) {
-                $class = \sprintf('\\%s\\GraphQL\\ASTConverter\\%sNode', __NAMESPACE__, \ucfirst(self::DEFINITION_TYPE_MAPPING[$typeDef->kind]));
-                $typesConfig[$typeDef->name->value] = \call_user_func([$class, 'toConfig'], $typeDef);
-            } else {
+            if (!isset($typeDef->kind) || !\in_array($typeDef->kind, \array_keys(self::DEFINITION_TYPE_MAPPING))) {
                 self::throwUnsupportedDefinitionNode($typeDef);
+            }
+            $class = \sprintf('\\%s\\GraphQL\\ASTConverter\\%sNode', __NAMESPACE__, \ucfirst(self::DEFINITION_TYPE_MAPPING[$typeDef->kind]));
+            $config = \call_user_func([$class, 'toConfig'], $typeDef);
+            if (isset($typeDef->name->value)) {
+                $typesConfig[$typeDef->name->value] = $config;
+            } else {
+                $typesConfig[] = $config;
             }
         }
 
