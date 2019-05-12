@@ -33,18 +33,6 @@ class OverblogGraphQLTypesExtension extends Extension
         'annotation' => AnnotationParser::class,
     ];
 
-    private static $defaultDefaultConfig = [
-        'definitions' => [
-            'mappings' => [
-                'auto_discover' => [
-                    'root_dir' => true,
-                    'bundles' => true,
-                ],
-                'types' => [],
-            ],
-        ],
-    ];
-
     private $treatedFiles = [];
     private $preTreatedFiles = [];
 
@@ -176,31 +164,15 @@ class OverblogGraphQLTypesExtension extends Extension
 
     private function mappingConfig(array $config, ContainerBuilder $container)
     {
-        // use default value if needed
-        $config = \array_replace_recursive(self::$defaultDefaultConfig, $config);
+        $typesMappings = $config['definitions']['mappings']['types'] ?? [];
 
-        $mappingConfig = $config['definitions']['mappings'];
-        $typesMappings = $mappingConfig['types'];
+        // register this bundle
+        $typesMappings[] = [
+            'dir' => $this->bundleDir(OverblogGraphQLBundle::class).'/Resources/config/graphql',
+            'types' => ['yaml'],
+        ];
 
-        // app only config files (yml or xml or graphql)
-        if ($mappingConfig['auto_discover']['root_dir'] && $container->hasParameter('kernel.root_dir')) {
-            $typesMappings[] = ['dir' => $container->getParameter('kernel.root_dir').'/config/graphql', 'types' => null];
-        }
-        if ($mappingConfig['auto_discover']['bundles']) {
-            $mappingFromBundles = $this->mappingFromBundles($container);
-            $typesMappings = \array_merge($typesMappings, $mappingFromBundles);
-        } else {
-            // enabled only for this bundle
-            $typesMappings[] = [
-                'dir' => $this->bundleDir(OverblogGraphQLBundle::class).'/Resources/config/graphql',
-                'types' => ['yaml'],
-            ];
-        }
-
-        // from config
-        $typesMappings = $this->detectFilesFromTypesMappings($typesMappings, $container);
-
-        return $typesMappings;
+        return $this->detectFilesFromTypesMappings($typesMappings, $container);
     }
 
     private function detectFilesFromTypesMappings(array $typesMappings, ContainerBuilder $container)
@@ -209,7 +181,8 @@ class OverblogGraphQLTypesExtension extends Extension
             function (array $typeMapping) use ($container) {
                 $suffix = $typeMapping['suffix'] ?? '';
                 $types = $typeMapping['types'] ?? null;
-                $params = $this->detectFilesByTypes($container, $typeMapping['dir'], $suffix, $types);
+                $schemas = $typeMapping['schemas'] ?? null;
+                $params = $this->detectFilesByTypes($container, $typeMapping['dir'], $suffix, $types, $schemas);
 
                 return $params;
             },
@@ -217,23 +190,7 @@ class OverblogGraphQLTypesExtension extends Extension
         ));
     }
 
-    private function mappingFromBundles(ContainerBuilder $container)
-    {
-        $typesMappings = [];
-        $bundles = $container->getParameter('kernel.bundles');
-
-        // auto detect from bundle
-        foreach ($bundles as $name => $class) {
-            $bundleDir = $this->bundleDir($class);
-
-            // only config files (yml or xml)
-            $typesMappings[] = ['dir' => $bundleDir.'/Resources/config/graphql', 'types' => null];
-        }
-
-        return $typesMappings;
-    }
-
-    private function detectFilesByTypes(ContainerBuilder $container, $path, $suffix, array $types = null)
+    private function detectFilesByTypes(ContainerBuilder $container, $path, $suffix, ?array $types, ?array $schemas)
     {
         // add the closest existing directory as a resource
         $resource = $path;
@@ -257,6 +214,7 @@ class OverblogGraphQLTypesExtension extends Extension
             if ($finder->count() > 0) {
                 $files[] = [
                     'type' => $type,
+                    'schemas' => $schemas,
                     'files' => $finder,
                 ];
                 if ($stopOnFirstTypeMatching) {

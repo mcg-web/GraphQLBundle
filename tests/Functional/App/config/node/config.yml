@@ -17,7 +17,6 @@ overblog_graphql:
             mutation: ~
             types: [User, Photo]
         mappings:
-            auto_discover: true
             types:
                 -
                     dir: "%kernel.root_dir%/config/node/mapping"

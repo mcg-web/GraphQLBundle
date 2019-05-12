@@ -221,16 +221,6 @@ class Configuration implements ConfigurationInterface
         $node = self::getRootNodeWithoutDeprecation($builder, 'mappings');
         $node
             ->children()
-                ->arrayNode('auto_discover')
-                    ->treatFalseLike(['bundles' => false, 'root_dir' => false])
-                    ->treatTrueLike(['bundles' => true, 'root_dir' => true])
-                    ->treatNullLike(['bundles' => true, 'root_dir' => true])
-                    ->addDefaultsIfNotSet()
-                    ->children()
-                        ->booleanNode('bundles')->defaultFalse()->end()
-                        ->booleanNode('root_dir')->defaultFalse()->end()
-                    ->end()
-                ->end()
                 ->arrayNode('types')
                     ->prototype('array')
                         ->addDefaultsIfNotSet()
@@ -255,6 +245,9 @@ class Configuration implements ConfigurationInterface
                             ->end()
                             ->scalarNode('dir')->defaultNull()->end()
                             ->scalarNode('suffix')->defaultValue(OverblogGraphQLTypesExtension::DEFAULT_TYPES_SUFFIX)->end()
+                            ->arrayNode('schemas')
+                                ->scalarPrototype()->end()
+                            ->end()
                         ->end()
                     ->end()
                 ->end()
@@ -266,8 +259,8 @@ class Configuration implements ConfigurationInterface
 
     private function doctrineSection()
     {
-        $builder = new TreeBuilder();
-        $node = $builder->root('doctrine');
+        $builder = new TreeBuilder('doctrine');
+        $node = self::getRootNodeWithoutDeprecation($builder, 'doctrine');
         $node
             ->addDefaultsIfNotSet()
             ->children()

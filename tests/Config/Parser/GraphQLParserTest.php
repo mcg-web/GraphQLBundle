@@ -38,13 +38,6 @@ class GraphQLParserTest extends TestCase
         GraphQLParser::parse(new \SplFileInfo($fileName), $this->containerBuilder);
     }
 
-    public function testParseNotSupportedSchemaDefinition(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Schema definition is not supported right now.');
-        GraphQLParser::parse(new \SplFileInfo(__DIR__.'/fixtures/graphql/not-supported-schema-definition.graphql'), $this->containerBuilder);
-    }
-
     public function testCustomScalarTypeDefaultFieldValue(): void
     {
         $this->expectException(\Exception::class);

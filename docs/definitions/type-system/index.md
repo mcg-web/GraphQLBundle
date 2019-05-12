@@ -25,7 +25,6 @@ Types can be define 3 different ways:
     overblog_graphql:
         definitions:
             mappings:
-                # auto_discover: false # to disable bundles and root dir auto discover
                 types:
                     -
                         type: yaml # or xml or graphql or annotation null

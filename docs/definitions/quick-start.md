@@ -16,7 +16,6 @@ overblog_graphql:
         schema:
             query: Query
         mappings:
-            auto_discover: false
             types:
                 -
 -                   type: yaml

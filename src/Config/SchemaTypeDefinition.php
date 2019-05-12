@@ -12,18 +12,9 @@ class SchemaTypeDefinition extends TypeDefinition
 
         $node
             ->children()
-                ->scalarNode('name')->isRequired()->end()
                 ->scalarNode('query')->isRequired()->end()
                 ->scalarNode('mutation')->defaultNull()->end()
                 ->scalarNode('subscription')->defaultNull()->end()
-                ->arrayNode('resolver_maps')
-                    ->defaultValue([])
-                    ->prototype('scalar')->end()
-                ->end()
-                ->arrayNode('types')
-                    ->defaultValue([])
-                    ->prototype('scalar')->end()
-                ->end()
             ->end();
 
         return $node;

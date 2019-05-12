@@ -78,7 +78,11 @@ class OverblogGraphQLTypesExtensionTest extends TestCase
             ],
         ]];
 
-        $this->assertEquals($this->container->getExtensionConfig('overblog_graphql_types'), $expected);
+        $actuel = $this->container->getExtensionConfig('overblog_graphql_types');
+        $this->assertCount(2, $actuel[0]);
+        $this->assertArrayHasKey('Type', $actuel[0]);
+        $this->assertArrayHasKey('PageInfo', $actuel[0]);
+        $this->assertEquals($expected[0]['Type'], $actuel[0]['Type']);
     }
 
     /**
