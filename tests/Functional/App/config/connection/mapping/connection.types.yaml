@@ -24,7 +24,7 @@ User:
             friendsBackward:
                 type: userConnection
                 argsBuilder: "Relay::BackwardConnection"
-                resolve: '@=resolver("friends", [value, args])'
+                resolve: '@=resolver("friends")'
 
 friendConnection:
     type: relay-connection

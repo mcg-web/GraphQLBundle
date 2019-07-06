@@ -10,6 +10,7 @@ use GraphQL\Executor\Promise\PromiseAdapter;
 use Overblog\GraphQLBundle\Executor\Promise\Adapter\ReactPromiseAdapter;
 use Overblog\GraphQLBundle\Relay\Connection\ConnectionBuilder;
 use Overblog\GraphQLBundle\Relay\Connection\Output\Edge;
+use Overblog\GraphQLBundle\Resolver\ResolveArgStack;
 use React\Promise\Promise;
 
 class ConnectionResolver
@@ -42,15 +43,21 @@ class ConnectionResolver
      */
     private $promiseAdapter;
 
-    public function __construct(PromiseAdapter $promiseAdapter)
+    private $resolveArgStack;
+
+    public function __construct(PromiseAdapter $promiseAdapter, ResolveArgStack $resolveArgStack)
     {
         $this->promiseAdapter = $promiseAdapter;
+        $this->resolveArgStack = $resolveArgStack;
     }
 
-    public function friendsResolver($user, $args)
+    public function friendsResolver()
     {
-        return $this->promiseAdapter->create(function (callable $resolve) use ($user, $args) {
-            return $resolve((new ConnectionBuilder())->connectionFromArray($user['friends'], $args));
+        return $this->promiseAdapter->create(function (callable $resolve) {
+            $resolveArg = $this->resolveArgStack->getCurrentResolveArg();
+
+            return $resolve((new ConnectionBuilder())
+                ->connectionFromArray($resolveArg->getValue()['friends'], $resolveArg->getArgs()));
         });
     }
 
