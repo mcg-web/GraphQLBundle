@@ -11,6 +11,12 @@ services:
         tags:
             - { name: kernel.event_listener, event: graphql.type_loaded, method: onTypeLoaded }
 
+    Overblog\GraphQLBundle\EventListener\ResolveArgStackListener:
+        arguments:
+            - '@Overblog\GraphQLBundle\Resolver\ResolveArgStack'
+        tags:
+            - { name: kernel.event_listener, event: graphql.type_loaded, method: onTypeLoaded, priority: 2048 }
+
     Overblog\GraphQLBundle\EventListener\ValidationErrorsListener:
         tags:
             - name: kernel.event_listener

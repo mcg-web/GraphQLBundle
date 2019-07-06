@@ -21,6 +21,7 @@ use Overblog\GraphQLBundle\EventListener\ErrorHandlerListener;
 use Overblog\GraphQLBundle\EventListener\ErrorLoggerListener;
 use Overblog\GraphQLBundle\EventListener\TypeDecoratorListener;
 use Overblog\GraphQLBundle\Request\Executor;
+use Overblog\GraphQLBundle\Resolver\ResolveArgStack;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\ContainerInterface;
@@ -47,6 +48,7 @@ class OverblogGraphQLExtension extends Extension
         $this->setDefinitionParameters($config, $container);
         $this->setClassLoaderListener($config, $container);
         $this->setCompilerCacheWarmer($config, $container);
+        $this->setDefaultResolver($config, $container);
         $this->registerForAutoconfiguration($container);
 
         $container->setParameter($this->getAlias().'.config', $config);
@@ -100,6 +102,15 @@ class OverblogGraphQLExtension extends Extension
         ;
     }
 
+    private function setDefaultResolver(array $config, ContainerBuilder $container): void
+    {
+        $container->register($this->getAlias().'.default_resolver', \Closure::class)
+            ->setFactory([new Reference(ResolveArgStack::class), 'lazyPush'])
+            ->setArguments([
+                $config['definitions']['default_resolver'],
+            ]);
+    }
+
     private function setClassLoaderListener(array $config, ContainerBuilder $container): void
     {
         $container->setParameter($this->getAlias().'.use_classloader_listener', $config['definitions']['use_classloader_listener']);
@@ -118,7 +129,6 @@ class OverblogGraphQLExtension extends Extension
     private function setDefinitionParameters(array $config, ContainerBuilder $container): void
     {
         // generator and config
-        $container->setParameter($this->getAlias().'.default_resolver', $config['definitions']['default_resolver']);
         $container->setParameter($this->getAlias().'.class_namespace', $config['definitions']['class_namespace']);
         $container->setParameter($this->getAlias().'.cache_dir', $config['definitions']['cache_dir']);
         $container->setParameter($this->getAlias().'.cache_dir_permissions', $config['definitions']['cache_dir_permissions']);

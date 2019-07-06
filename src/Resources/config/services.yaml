@@ -14,7 +14,7 @@ services:
             - "@overblog_graphql.executor"
             - "@overblog_graphql.promise_adapter"
             - "@event_dispatcher"
-            - '%overblog_graphql.default_resolver%'
+            - '@overblog_graphql.default_resolver'
             - "%overblog_graphql.use_experimental_executor%"
         calls:
             - ["setMaxQueryComplexity", ["%overblog_graphql.query_max_complexity%"]]
@@ -93,3 +93,5 @@ services:
     Overblog\GraphQLBundle\Definition\ConfigProcessor: ~
 
     GraphQL\Executor\Promise\PromiseAdapter: "@overblog_graphql.promise_adapter"
+
+    Overblog\GraphQLBundle\Resolver\ResolveArgStack: ~
