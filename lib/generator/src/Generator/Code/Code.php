@@ -58,6 +58,14 @@ class Code implements CodeInterface
         return $this;
     }
 
+    public function replace($lines, int $position): self
+    {
+        $newLines = $this->cleanLines($lines);
+        \array_splice($this->lines, $position, 1, $newLines);
+
+        return $this;
+    }
+
     private function cleanLines($lines): array
     {
         if (\is_string($lines)) {
