@@ -47,10 +47,10 @@ class ConnectionResolver
         $this->promiseAdapter = $promiseAdapter;
     }
 
-    public function friendsResolver(array $user, ArgumentInterface $args): GraphQLPromise
+    public function friendsResolver(array $value, ArgumentInterface $args): GraphQLPromise
     {
-        return $this->promiseAdapter->create(function (callable $resolve) use ($user, $args) {
-            return $resolve((new ConnectionBuilder())->connectionFromArray($user['friends'], $args));
+        return $this->promiseAdapter->create(function (callable $resolve) use ($value, $args) {
+            return $resolve((new ConnectionBuilder())->connectionFromArray($value['friends'], $args));
         });
     }
 

@@ -70,7 +70,7 @@ class ConfigParserPass implements CompilerPassInterface
     public function process(ContainerBuilder $container): void
     {
         $config = $this->processConfiguration([$this->getConfigs($container)]);
-        $container->setParameter($this->getAlias().'.config', $config);
+        $container->setParameter('overblog_graphql_types.config', $config);
     }
 
     public function processConfiguration(array $configs): array
@@ -82,7 +82,7 @@ class ConfigParserPass implements CompilerPassInterface
     {
         $config = $container->getParameterBag()->resolveValue($container->getParameter('overblog_graphql.config'));
         $container->getParameterBag()->remove('overblog_graphql.config');
-        $container->setParameter($this->getAlias().'.classes_map', []);
+        $container->setParameter('overblog_graphql_types.classes_map', []);
         $typesMappings = $this->mappingConfig($config, $container);
         // reset treated files
         $this->treatedFiles = [];
@@ -263,15 +263,5 @@ class ConfigParserPass implements CompilerPassInterface
         $bundle = new ReflectionClass($bundleClass); // @phpstan-ignore-line
 
         return dirname($bundle->getFileName());
-    }
-
-    private function getAliasPrefix(): string
-    {
-        return 'overblog_graphql';
-    }
-
-    private function getAlias(): string
-    {
-        return $this->getAliasPrefix().'_types';
     }
 }
