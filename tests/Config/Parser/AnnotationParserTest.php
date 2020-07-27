@@ -16,9 +16,11 @@ use function substr;
 
 class AnnotationParserTest extends TestCase
 {
-    protected array $config = [];
+    private AnnotationParser $parser;
 
-    protected array $parserConfig = [
+    private array $config = [];
+
+    private array $parserConfig = [
         'definitions' => [
             'schema' => [
                 'default' => ['query' => 'RootQuery', 'mutation' => 'RootMutation'],
@@ -35,24 +37,18 @@ class AnnotationParserTest extends TestCase
     public function setUp(): void
     {
         parent::setup();
-
+        $this->parser = new AnnotationParser();
         $files = [];
         $rii = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(__DIR__.'/fixtures/annotations/'));
         foreach ($rii as $file) {
             if (!$file->isDir() && '.php' === substr($file->getPathname(), -4) && false === strpos($file->getPathName(), 'Invalid')) {
-                $files[] = $file->getPathname();
+                $files[] = new SplFileInfo($file->getPathname());
             }
         }
 
-        AnnotationParser::reset();
-
-        foreach ($files as $file) {
-            AnnotationParser::preParse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
-        }
-
         $this->config = [];
-        foreach ($files as $file) {
-            $this->config += self::cleanConfig(AnnotationParser::parse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig));
+        foreach ($this->parser->parseFiles($files, $this->containerBuilder, $this->parserConfig) as $config) {
+            $this->config += self::cleanConfig($config);
         }
     }
 
@@ -71,7 +67,7 @@ class AnnotationParserTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessageMatches('/^Failed to parse GraphQL annotations from file/');
-        AnnotationParser::preParse(new SplFileInfo(__DIR__.'/fixtures/annotations/Type/Battle.php'), $this->containerBuilder, ['doctrine' => ['types_mapping' => []]]);
+        $this->parser->parseFiles([new SplFileInfo(__DIR__.'/fixtures/annotations/Type/Battle.php')], $this->containerBuilder, ['doctrine' => ['types_mapping' => []]]);
     }
 
     public function testTypes(): void
@@ -335,7 +331,7 @@ class AnnotationParserTest extends TestCase
         ]);
     }
 
-    public function testFullqualifiedName(): void
+    public function testFullQualifiedName(): void
     {
         $this->assertEquals(self::class, AnnotationParser::fullyQualifiedClassName(self::class, 'Overblog\GraphQLBundle'));
     }
@@ -414,7 +410,7 @@ class AnnotationParserTest extends TestCase
     {
         try {
             $file = __DIR__.'/fixtures/annotations/Invalid/InvalidArgumentGuessing.php';
-            AnnotationParser::parse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file)], $this->containerBuilder, $this->parserConfig);
             $this->fail('Missing type hint for auto-guessed argument should have raise an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
@@ -426,7 +422,7 @@ class AnnotationParserTest extends TestCase
     {
         try {
             $file = __DIR__.'/fixtures/annotations/Invalid/InvalidReturnTypeGuessing.php';
-            AnnotationParser::parse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file)], $this->containerBuilder, $this->parserConfig);
             $this->fail('Missing type hint for auto-guessed return type should have raise an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
@@ -438,7 +434,7 @@ class AnnotationParserTest extends TestCase
     {
         try {
             $file = __DIR__.'/fixtures/annotations/Invalid/InvalidDoctrineRelationGuessing.php';
-            AnnotationParser::parse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file)], $this->containerBuilder, $this->parserConfig);
             $this->fail('Auto-guessing field type from doctrine relation on a non graphql entity should failed with an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
@@ -450,7 +446,7 @@ class AnnotationParserTest extends TestCase
     {
         try {
             $file = __DIR__.'/fixtures/annotations/Invalid/InvalidDoctrineTypeGuessing.php';
-            AnnotationParser::parse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file)], $this->containerBuilder, $this->parserConfig);
             $this->fail('Auto-guessing field type from doctrine relation on a non graphql entity should failed with an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
@@ -462,7 +458,7 @@ class AnnotationParserTest extends TestCase
     {
         try {
             $file = __DIR__.'/fixtures/annotations/Invalid/InvalidUnion.php';
-            AnnotationParser::parse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file)], $this->containerBuilder, $this->parserConfig);
             $this->fail('Union with missing resolve type shoud have raise an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
@@ -474,7 +470,7 @@ class AnnotationParserTest extends TestCase
     {
         try {
             $file = __DIR__.'/fixtures/annotations/Invalid/InvalidAccess.php';
-            AnnotationParser::parse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file)], $this->containerBuilder, $this->parserConfig);
             $this->fail('@Access annotation without a @Field annotation should raise an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
@@ -486,7 +482,7 @@ class AnnotationParserTest extends TestCase
     {
         try {
             $file = __DIR__.'/fixtures/annotations/Invalid/InvalidPrivateMethod.php';
-            AnnotationParser::parse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file)], $this->containerBuilder, $this->parserConfig);
             $this->fail('@Access annotation without a @Field annotation should raise an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
@@ -497,11 +493,9 @@ class AnnotationParserTest extends TestCase
     public function testInvalidProviderQueryOnMutation(): void
     {
         $file = __DIR__.'/fixtures/annotations/Invalid/InvalidProvider.php';
-        AnnotationParser::preParse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
-
         try {
             $mutationFile = __DIR__.'/fixtures/annotations/Type/RootMutation2.php';
-            AnnotationParser::parse(new SplFileInfo($mutationFile), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file), new SplFileInfo($mutationFile)], $this->containerBuilder, $this->parserConfig);
             $this->fail('Using @Query targeting mutation type should raise an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);
@@ -512,10 +506,9 @@ class AnnotationParserTest extends TestCase
     public function testInvalidProviderMutationOnQuery(): void
     {
         $file = __DIR__.'/fixtures/annotations/Invalid/InvalidProvider.php';
-        AnnotationParser::preParse(new SplFileInfo($file), $this->containerBuilder, $this->parserConfig);
         try {
             $queryFile = __DIR__.'/fixtures/annotations/Type/RootQuery2.php';
-            AnnotationParser::parse(new SplFileInfo($queryFile), $this->containerBuilder, $this->parserConfig);
+            (new AnnotationParser())->parseFiles([new SplFileInfo($file), new SplFileInfo($queryFile)], $this->containerBuilder, $this->parserConfig);
             $this->fail('Using @Mutation targeting query type should raise an exception');
         } catch (Exception $e) {
             $this->assertInstanceOf(InvalidArgumentException::class, $e);

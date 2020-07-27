@@ -20,7 +20,7 @@ class GraphQLParserTest extends TestCase
         $expected = include __DIR__.'/fixtures/graphql/schema.php';
 
         $this->assertContainerAddFileToResources($fileName);
-        $config = GraphQLParser::parse(new SplFileInfo($fileName), $this->containerBuilder);
+        $config = (new GraphQLParser())->parseFiles([new SplFileInfo($fileName)], $this->containerBuilder)[0];
         $this->assertSame($expected, self::cleanConfig($config));
     }
 
@@ -30,7 +30,7 @@ class GraphQLParserTest extends TestCase
 
         $this->assertContainerAddFileToResources($fileName);
 
-        $config = GraphQLParser::parse(new SplFileInfo($fileName), $this->containerBuilder);
+        $config = (new GraphQLParser())->parseFiles([new SplFileInfo($fileName)], $this->containerBuilder)[0];
         $this->assertSame([], $config);
     }
 
@@ -39,14 +39,14 @@ class GraphQLParserTest extends TestCase
         $fileName = __DIR__.'/fixtures/graphql/invalid.graphql';
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage(sprintf('An error occurred while parsing the file "%s"', $fileName));
-        GraphQLParser::parse(new SplFileInfo($fileName), $this->containerBuilder);
+        (new GraphQLParser())->parseFiles([new SplFileInfo($fileName)], $this->containerBuilder);
     }
 
     public function testParseNotSupportedSchemaDefinition(): void
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Schema definition is not supported right now.');
-        GraphQLParser::parse(new SplFileInfo(__DIR__.'/fixtures/graphql/not-supported-schema-definition.graphql'), $this->containerBuilder);
+        (new GraphQLParser())->parseFiles([new SplFileInfo(__DIR__.'/fixtures/graphql/not-supported-schema-definition.graphql')], $this->containerBuilder);
     }
 
     public function testCustomScalarTypeDefaultFieldValue(): void

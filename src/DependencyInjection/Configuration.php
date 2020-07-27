@@ -19,7 +19,6 @@ use Symfony\Component\Config\Definition\Builder\EnumNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\ScalarNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
-use function array_keys;
 use function is_array;
 use function is_int;
 use function is_numeric;
@@ -276,7 +275,7 @@ class Configuration implements ConfigurationInterface
                         ->end()
                         ->children()
                             ->arrayNode('types')
-                                ->prototype('enum')->values(array_keys(ConfigParserPass::SUPPORTED_TYPES_EXTENSIONS))->isRequired()->end()
+                                ->prototype('enum')->values(['yaml', 'xml', 'graphql', 'annotation'])->isRequired()->end()
                             ->end()
                             ->scalarNode('dir')->defaultNull()->end()
                             ->scalarNode('suffix')->defaultValue(ConfigParserPass::DEFAULT_TYPES_SUFFIX)->end()

@@ -56,13 +56,6 @@ class ConfigParserPassTest extends TestCase
         $this->processCompilerPass($this->getMappingConfig('xml'));
     }
 
-    public function testPreparseOnPrepend(): void
-    {
-        $this->expectException(InvalidConfigurationException::class);
-        $this->expectExceptionMessage('The path "overblog_graphql_types.Type._object_config.fields" should have at least 1 element(s) defined.');
-        $this->processCompilerPass($this->getMappingConfig('annotation'));
-    }
-
     /**
      * @dataProvider internalConfigKeys
      */

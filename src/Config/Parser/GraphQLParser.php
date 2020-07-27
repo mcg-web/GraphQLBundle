@@ -38,7 +38,33 @@ class GraphQLParser implements ParserInterface
         NodeKind::SCALAR_TYPE_DEFINITION => 'customScalar',
     ];
 
-    public static function parse(SplFileInfo $file, ContainerBuilder $container, array $configs = []): array
+    /**
+     * {@inheritdoc}
+     */
+    public function parseFiles(array $files, ContainerBuilder $container, array $config = []): array
+    {
+        return array_map(function (SplFileInfo $file) use ($container) {
+            return $this->parseFile($file, $container);
+        }, $files);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function supportedExtensions(): array
+    {
+        return ['graphql', 'graphqls'];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getName(): string
+    {
+        return 'graphql';
+    }
+
+    private function parseFile(SplFileInfo $file, ContainerBuilder $container): array
     {
         $container->addResource(new FileResource($file->getRealPath()));
         $content = trim(file_get_contents($file->getPathname()));

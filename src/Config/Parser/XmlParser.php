@@ -19,7 +19,30 @@ class XmlParser implements ParserInterface
     /**
      * {@inheritdoc}
      */
-    public static function parse(SplFileInfo $file, ContainerBuilder $container, array $configs = []): array
+    public function parseFiles(array $files, ContainerBuilder $container, array $config = []): array
+    {
+        return array_map(function (SplFileInfo $file) use ($container) {
+            return $this->parseFile($file, $container);
+        }, $files);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function supportedExtensions(): array
+    {
+        return ['xml'];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getName(): string
+    {
+        return 'xml';
+    }
+
+    private function parseFile(SplFileInfo $file, ContainerBuilder $container): array
     {
         $typesConfig = [];
         $container->addResource(new FileResource($file->getRealPath()));

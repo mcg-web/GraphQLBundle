@@ -9,5 +9,12 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
 
 interface ParserInterface
 {
-    public static function parse(SplFileInfo $file, ContainerBuilder $container, array $configs = []): array;
+    /**
+     * @param SplFileInfo[] $files
+     */
+    public function parseFiles(array $files, ContainerBuilder $container, array $config = []): array;
+
+    public function supportedExtensions(): array;
+
+    public function getName(): string;
 }

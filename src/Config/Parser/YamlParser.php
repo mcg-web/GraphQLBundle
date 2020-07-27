@@ -17,17 +17,45 @@ use function sprintf;
 
 class YamlParser implements ParserInterface
 {
-    private static Parser $yamlParser;
+    private Parser $yamlParser;
 
-    public static function parse(SplFileInfo $file, ContainerBuilder $container, array $configs = []): array
+    public function __construct()
     {
-        if (!isset(self::$yamlParser)) {
-            self::$yamlParser = new Parser();
-        }
+        $this->yamlParser = new Parser();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function parseFiles(array $files, ContainerBuilder $container, array $config = []): array
+    {
+        return array_map(function (SplFileInfo $file) use ($container) {
+            return $this->parseFile($file, $container);
+        }, $files);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function supportedExtensions(): array
+    {
+        return ['yaml', 'yml'];
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getName(): string
+    {
+        return 'yaml';
+    }
+
+    private function parseFile(SplFileInfo $file, ContainerBuilder $container): array
+    {
         $container->addResource(new FileResource($file->getRealPath()));
 
         try {
-            $typesConfig = self::$yamlParser->parse(file_get_contents($file->getPathname()), Yaml::PARSE_CONSTANT);
+            $typesConfig = $this->yamlParser->parse(file_get_contents($file->getPathname()), Yaml::PARSE_CONSTANT | Yaml::PARSE_CUSTOM_TAGS);
         } catch (ParseException $e) {
             throw new InvalidArgumentException(sprintf('The file "%s" does not contain valid YAML.', $file), 0, $e);
         }

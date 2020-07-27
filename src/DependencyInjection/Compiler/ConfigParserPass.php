@@ -7,7 +7,7 @@ namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 use InvalidArgumentException;
 use Overblog\GraphQLBundle\Config\Parser\AnnotationParser;
 use Overblog\GraphQLBundle\Config\Parser\GraphQLParser;
-use Overblog\GraphQLBundle\Config\Parser\PreParserInterface;
+use Overblog\GraphQLBundle\Config\Parser\ParserInterface;
 use Overblog\GraphQLBundle\Config\Parser\XmlParser;
 use Overblog\GraphQLBundle\Config\Parser\YamlParser;
 use Overblog\GraphQLBundle\DependencyInjection\TypesConfiguration;
@@ -20,35 +20,23 @@ use Symfony\Component\Config\Resource\FileResource;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\Finder\Finder;
-use Symfony\Component\Finder\SplFileInfo;
 use function array_count_values;
 use function array_filter;
 use function array_keys;
 use function array_map;
 use function array_merge;
 use function array_replace_recursive;
-use function call_user_func;
 use function dirname;
 use function implode;
-use function is_a;
 use function is_dir;
 use function sprintf;
 
 class ConfigParserPass implements CompilerPassInterface
 {
-    public const SUPPORTED_TYPES_EXTENSIONS = [
-        'yaml' => '{yaml,yml}',
-        'xml' => 'xml',
-        'graphql' => '{graphql,graphqls}',
-        'annotation' => 'php',
-    ];
-
-    public const PARSERS = [
-        'yaml' => YamlParser::class,
-        'xml' => XmlParser::class,
-        'graphql' => GraphQLParser::class,
-        'annotation' => AnnotationParser::class,
-    ];
+    /**
+     * @var ParserInterface[]
+     */
+    private array $parsers = [];
 
     private static array $defaultDefaultConfig = [
         'definitions' => [
@@ -62,10 +50,14 @@ class ConfigParserPass implements CompilerPassInterface
         ],
     ];
 
-    private array $treatedFiles = [];
-    private array $preTreatedFiles = [];
-
     public const DEFAULT_TYPES_SUFFIX = '.types';
+
+    public function __construct()
+    {
+        foreach ($this->getDefaultParsers() as $parser) {
+            $this->parsers[$parser->getName()] = $parser;
+        }
+    }
 
     public function process(ContainerBuilder $container): void
     {
@@ -78,74 +70,48 @@ class ConfigParserPass implements CompilerPassInterface
         return (new Processor())->processConfiguration(new TypesConfiguration(), $configs);
     }
 
+    /**
+     * @return ParserInterface[]
+     */
+    private function getDefaultParsers(): iterable
+    {
+        yield new YamlParser();
+        yield new XmlParser();
+        yield new GraphQLParser();
+        yield new AnnotationParser();
+    }
+
     private function getConfigs(ContainerBuilder $container): array
     {
         $config = $container->getParameterBag()->resolveValue($container->getParameter('overblog_graphql.config'));
         $container->getParameterBag()->remove('overblog_graphql.config');
         $container->setParameter('overblog_graphql_types.classes_map', []);
         $typesMappings = $this->mappingConfig($config, $container);
-        // reset treated files
-        $this->treatedFiles = [];
         $typesMappings = array_merge(...$typesMappings);
         $typeConfigs = [];
 
-        // treats mappings
-        // Pre-parse all files
-        AnnotationParser::reset();
-        $typesNeedPreParsing = $this->typesNeedPreParsing();
+        $typesMappingsGroupByParser = [];
+        $treatedFiles = [];
+
         foreach ($typesMappings as $params) {
-            if ($typesNeedPreParsing[$params['type']]) {
-                $this->parseTypeConfigFiles($params['type'], $params['files'], $container, $config, true);
+            foreach ($params['files'] as  $file) {
+                $fileRealPath = $file->getRealPath();
+                if (isset($treatedFiles[$fileRealPath])) {
+                    continue;
+                }
+                $typesMappingsGroupByParser[$params['type']][] = $file;
+                $treatedFiles[$file->getRealPath()] = true;
             }
         }
 
-        // Parse all files and get related config
-        foreach ($typesMappings as $params) {
-            $typeConfigs = array_merge($typeConfigs, $this->parseTypeConfigFiles($params['type'], $params['files'], $container, $config));
+        foreach ($typesMappingsGroupByParser as $type => $files) {
+            $typeConfigs = array_merge($typeConfigs, $this->parsers[$type]->parseFiles($files, $container, $config));
         }
 
         $this->checkTypesDuplication($typeConfigs);
+
         // flatten config is a requirement to support inheritance
-        $flattenTypeConfig = array_merge(...$typeConfigs);
-
-        return $flattenTypeConfig;
-    }
-
-    private function typesNeedPreParsing(): array
-    {
-        $needPreParsing = [];
-        foreach (self::PARSERS as $type => $className) {
-            $needPreParsing[$type] = is_a($className, PreParserInterface::class, true);
-        }
-
-        return $needPreParsing;
-    }
-
-    /**
-     * @param SplFileInfo[] $files
-     */
-    private function parseTypeConfigFiles(string $type, iterable $files, ContainerBuilder $container, array $configs, bool $preParse = false): array
-    {
-        if ($preParse) {
-            $method = 'preParse';
-            $treatedFiles = &$this->preTreatedFiles;
-        } else {
-            $method = 'parse';
-            $treatedFiles = &$this->treatedFiles;
-        }
-
-        $config = [];
-        foreach ($files as $file) {
-            $fileRealPath = $file->getRealPath();
-            if (isset($treatedFiles[$fileRealPath])) {
-                continue;
-            }
-
-            $config[] = call_user_func([self::PARSERS[$type], $method], $file, $container, $configs);
-            $treatedFiles[$file->getRealPath()] = true;
-        }
-
-        return $config;
+        return array_merge(...$typeConfigs);
     }
 
     private function checkTypesDuplication(array $typeConfigs): void
@@ -231,13 +197,13 @@ class ConfigParserPass implements CompilerPassInterface
 
         $stopOnFirstTypeMatching = empty($types);
 
-        $types = $stopOnFirstTypeMatching ? array_keys(self::SUPPORTED_TYPES_EXTENSIONS) : $types;
+        $types = $stopOnFirstTypeMatching ? array_keys($this->parsers) : $types;
         $files = [];
 
         foreach ($types as $type) {
             $finder = Finder::create();
             try {
-                $finder->files()->in($path)->name(sprintf('*%s.%s', $suffix, self::SUPPORTED_TYPES_EXTENSIONS[$type]));
+                $finder->files()->in($path)->name(sprintf('*%s.{%s}', $suffix, join(',', $this->parsers[$type]->supportedExtensions())));
             } catch (InvalidArgumentException $e) {
                 continue;
             }
