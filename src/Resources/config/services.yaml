@@ -54,9 +54,14 @@ services:
         arguments:
             - "@overblog_graphql.promise_adapter"
 
+    Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunctionProvider:
+        arguments:
+            - !tagged_iterator overblog_graphql.expression_function
+
     Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage:
         arguments:
             - "@?overblog_graphql.cache_expression_language_parser"
+            - ['@Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunctionProvider']
 
     Overblog\GraphQLBundle\Generator\TypeGenerator:
         arguments:

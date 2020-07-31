@@ -8,7 +8,6 @@ use Overblog\GraphQLBundle\DependencyInjection\Compiler\AliasedPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ArgumentResolverValuePass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ConfigParserPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ConfigProcessorPass;
-use Overblog\GraphQLBundle\DependencyInjection\Compiler\ExpressionFunctionPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\GlobalVariablesPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\MutationTaggedServiceMappingTaggedPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ResolverMapTaggedServiceMappingPass;
@@ -42,7 +41,6 @@ class OverblogGraphQLBundle extends Bundle
         $container->addCompilerPass(new ConfigParserPass());
         $container->addCompilerPass(new ConfigProcessorPass());
         $container->addCompilerPass(new GlobalVariablesPass());
-        $container->addCompilerPass(new ExpressionFunctionPass());
         $container->addCompilerPass(new ResolverMethodAliasesPass());
         $container->addCompilerPass(new AliasedPass());
         $container->addCompilerPass(new ResolverMapTaggedServiceMappingPass());
