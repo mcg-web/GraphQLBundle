@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 
+use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
-use Overblog\GraphQLBundle\Resolver\Resolver;
+use Overblog\GraphQLBundle\Resolver\ResolverFactory;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\Reference;
@@ -19,8 +19,6 @@ use function is_string;
 
 class ArgumentResolverValuePass implements CompilerPassInterface
 {
-    private const ALLOWED_ARGUMENTS = ['$value', '$args', '$context', '$info'];
-
     public function process(ContainerBuilder $container): void
     {
         $argumentMetadataFactory = new ArgumentMetadataFactory();
@@ -35,7 +33,7 @@ class ArgumentResolverValuePass implements CompilerPassInterface
                         $container, $argumentMetadataFactory, $resolverClass, $resolverMethod, $bind
                     );
                     // TODO(mcg-web): use id directly in TypeBuilder
-                    $config['config']['fields'][$name]['resolve'] = "@=res('$id', [value, args, context, info])";
+                    $config['config']['fields'][$name]['resolve'] = sprintf('@=res(\'%s\', [value, args, context, info])', $id);
                     $config['config']['fields'][$name]['resolver']['id'] = $id;
                 }
             }
@@ -82,10 +80,11 @@ class ArgumentResolverValuePass implements CompilerPassInterface
         }
         $id = $this->generateAnonymousResolverId($resolverClass, $resolverMethod, $bind);
         if (!$container->hasDefinition($id)) {
-            $container->register($id, Resolver::class)
+            $container->register($id, Closure::class)
+                ->setFactory([new Reference(ResolverFactory::class), 'createResolver'])
                 ->setArguments([
                     $this->resolverReference($resolver, $resolverRef, $isStatic),
-                    $this->resolveServices($this->namedArgumentValues($container, $argumentMetadataFactory, $resolver, $bind)),
+                    $this->resolveArgumentValues($container, $argumentMetadataFactory, $resolver, $bind),
                 ])
                 ->addTag('overblog_graphql.resolver')
             ;
@@ -115,7 +114,7 @@ class ArgumentResolverValuePass implements CompilerPassInterface
     /**
      * @param array|string $resolver
      */
-    private function namedArgumentValues(
+    private function resolveArgumentValues(
         ContainerBuilder $container, ArgumentMetadataFactory $argumentMetadataFactory, $resolver, array $bind
     ): array {
         $default = $bind + [
@@ -128,14 +127,14 @@ class ArgumentResolverValuePass implements CompilerPassInterface
         $argumentValues = [];
         $arguments = $argumentMetadataFactory->createArgumentMetadata($resolver);
         foreach ($arguments as $argument) {
-            if (null !== $argument->getType() && isset($default[$argument->getType().' $'.$argument->getName()])) {
+            if (null !== $argument->getType() && isset($default[$argument->getType().' $'.$argument->getName()])) { // type and argument name
                 $argumentValues[$argument->getName()] = $default[$argument->getType().' $'.$argument->getName()];
-            } elseif (null !== $argument->getType() && isset($default[$argument->getType()])) {
+            } elseif (null !== $argument->getType() && isset($default[$argument->getType()])) { // typehint instance of
                 $argumentValues[$argument->getName()] = $default[$argument->getType()];
-            } elseif (isset($default['$'.$argument->getName()])) { // default values
+            } elseif (isset($default['$'.$argument->getName()])) { // default values (graphql arguments)
                 $argumentValues[$argument->getName()] = $default['$'.$argument->getName()];
             } elseif (null !== $argument->getType() && $container->has($argument->getType())) { // service
-                $argumentValues[$argument->getName()] = '@'.$argument->getType();
+                $argumentValues[$argument->getName()] = new Reference($argument->getType());
             } elseif ($argument->hasDefaultValue() || (null !== $argument->getType() && $argument->isNullable() && !$argument->isVariadic())) { // default value from signature
                 $argumentValues[$argument->getName()] = $argument->hasDefaultValue() ? $argument->getDefaultValue() : null;
             } else {
@@ -145,47 +144,5 @@ class ArgumentResolverValuePass implements CompilerPassInterface
         }
 
         return $argumentValues;
-    }
-
-    /**
-     * @see \Symfony\Component\DependencyInjection\Loader\YamlFileLoader::resolveServices
-     *
-     * @param mixed $value
-     *
-     * @return array|false|string|Reference
-     */
-    private function resolveServices($value, bool $isParameter = false)
-    {
-        if (is_array($value)) {
-            foreach ($value as $k => $v) {
-                $value[$k] = $this->resolveServices($v, $isParameter);
-            }
-        } elseif (is_string($value)) {
-            if (0 === strpos($value, '$') && !in_array($value, self::ALLOWED_ARGUMENTS)) {
-                throw new InvalidArgumentException(sprintf('Argument "%s" is not supported.', $value));
-            } elseif (0 === strpos($value, '@=')) {
-                throw new InvalidArgumentException(sprintf('Expression syntax "%s" are not supported for now.', substr($value, 2)));
-            } elseif (0 === strpos($value, '@')) {
-                if (0 === strpos($value, '@@')) {
-                    $value = substr($value, 1);
-                    $invalidBehavior = null;
-                } elseif (0 === strpos($value, '@!')) {
-                    $value = substr($value, 2);
-                    $invalidBehavior = ContainerInterface::IGNORE_ON_UNINITIALIZED_REFERENCE;
-                } elseif (0 === strpos($value, '@?')) {
-                    $value = substr($value, 2);
-                    $invalidBehavior = ContainerInterface::IGNORE_ON_INVALID_REFERENCE;
-                } else {
-                    $value = substr($value, 1);
-                    $invalidBehavior = ContainerInterface::EXCEPTION_ON_INVALID_REFERENCE;
-                }
-
-                if (null !== $invalidBehavior) {
-                    $value = new Reference($value, $invalidBehavior);
-                }
-            }
-        }
-
-        return $value;
     }
 }

@@ -11,9 +11,7 @@ use GraphQL\Type\Definition\ListOfType;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Error\UserError;
 use Overblog\GraphQLBundle\Error\UserWarning;
-use Overblog\GraphQLBundle\Relay\Connection\Output\Connection;
-use Overblog\GraphQLBundle\Relay\Connection\Output\Edge;
-use function array_map;
+use Overblog\GraphQLBundle\Relay\Connection\ConnectionInterface;
 use function call_user_func_array;
 use function is_iterable;
 
@@ -27,7 +25,7 @@ class AccessResolver
     }
 
     /**
-     * @return Promise|mixed|Connection
+     * @return Promise|mixed|ConnectionInterface
      */
     public function resolve(callable $accessChecker, callable $resolveCallback, array $resolveArgs = [], bool $useStrictAccess = false)
     {
@@ -77,9 +75,9 @@ class AccessResolver
     }
 
     /**
-     * @param iterable|object|Connection $result
+     * @param iterable|object|ConnectionInterface $result
      *
-     * @return Connection|iterable
+     * @return ConnectionInterface|iterable
      */
     private function processFilter($result, callable $accessChecker, array $resolveArgs)
     {
@@ -90,15 +88,10 @@ class AccessResolver
             foreach ($result as $i => $object) {
                 $result[$i] = $this->hasAccess($accessChecker, $resolveArgs, $object) ? $object : null; // @phpstan-ignore-line
             }
-        } elseif ($result instanceof Connection) {
-            $result->setEdges(array_map(
-                function (Edge $edge) use ($accessChecker, $resolveArgs) {
-                    $edge->setNode($this->hasAccess($accessChecker, $resolveArgs, $edge->getNode()) ? $edge->getNode() : null);
-
-                    return $edge;
-                },
-                $result->getEdges()
-            ));
+        } elseif ($result instanceof ConnectionInterface) {
+            foreach ($result->getEdges() as $edge) {
+                $edge->setNode($this->hasAccess($accessChecker, $resolveArgs, $edge->getNode()) ? $edge->getNode() : null);
+            }
         } elseif (!$this->hasAccess($accessChecker, $resolveArgs, $result)) {
             throw new UserWarning('Access denied to this field.');
         }
