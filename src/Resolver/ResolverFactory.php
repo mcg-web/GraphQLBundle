@@ -8,6 +8,8 @@ use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\ArgumentFactory;
 use Overblog\GraphQLBundle\Definition\ArgumentInterface;
+use Overblog\GraphQLBundle\Definition\GlobalVariables;
+use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use function is_string;
 
 final class ResolverFactory
@@ -24,7 +26,17 @@ final class ResolverFactory
         $this->argumentFactory = $argumentFactory;
     }
 
-    public function createResolver(callable $handler, array $resolverArgs, ?Closure $granter = null): Closure
+    public function createExpressionResolver(string $expression, ExpressionConverter $expressionConverter, GlobalVariables $globalVariables): Closure
+    {
+        $code = sprintf('return %s;', $expressionConverter->convert($expression));
+
+        /** @phpstan-ignore-next-line */
+        return $this->argumentFactory->wrapResolverArgs(static function ($value, ArgumentInterface $args, $context, ResolveInfo $info) use ($code, $globalVariables) {
+            return eval($code);
+        });
+    }
+
+    public function createResolver(callable $handler, array $resolverArgs): Closure
     {
         $resolverArgs = array_values($resolverArgs);
         $needResolveArgs = [];

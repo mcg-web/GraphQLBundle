@@ -6,6 +6,7 @@ namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 
 use InvalidArgumentException;
 use Overblog\GraphQLBundle\Definition\GlobalVariables;
+use Overblog\GraphQLBundle\Tests\Generator\TypeGenerator;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Reference;
@@ -37,7 +38,7 @@ final class GlobalVariablesPass implements CompilerPassInterface
                     $expressionLanguageDefinition->addMethodCall(
                         'addGlobalName',
                         [
-                            sprintf('globalVariables->get(\'%s\')', $attributes['alias']),
+                            sprintf('%s->get(\'%s\')', TypeGenerator::GLOBAL_VARS, $attributes['alias']),
                             $attributes['alias'],
                         ]
                     );

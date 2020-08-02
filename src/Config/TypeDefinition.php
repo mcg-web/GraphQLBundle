@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Config;
 
+use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\ScalarNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
@@ -152,6 +153,56 @@ abstract class TypeDefinition
         if ($isRequired) {
             $node->isRequired();
         }
+
+        return $node;
+    }
+
+    protected function resolverSection(string $name, string $info): ArrayNodeDefinition
+    {
+        /** @var ArrayNodeDefinition $node */
+        $node = self::createNode($name);
+        /** @phpstan-ignore-next-line */
+        $node
+            ->info($info)
+            ->validate()
+                ->ifTrue(fn (array $v) => !empty($v['method']) && !empty($v['expression']))
+                ->thenInvalid('"method" and "expression" should not be use together.')
+            ->end()
+            ->validate()
+                ->ifTrue(fn (array $v) => !empty($v['expression']) && !empty($v['bind']))
+                ->thenInvalid('"expression" does not support "bind" options.')
+            ->end()
+            ->beforeNormalization()
+                // Allow short syntax
+                ->ifTrue(fn ($options) => is_string($options) && ExpressionLanguage::stringHasTrigger($options))
+                ->then(fn ($options) => ['expression' => ExpressionLanguage::unprefixExpression($options)])
+            ->end()
+            ->beforeNormalization()
+                ->ifTrue(fn ($options) => is_string($options) && !ExpressionLanguage::stringHasTrigger($options))
+                ->then(fn ($options) => ['method' => $options])
+            ->end()
+            ->beforeNormalization()
+                // clean expression
+                ->ifTrue(fn ($options) => isset($options['expression']) && is_string($options['expression']) && ExpressionLanguage::stringHasTrigger($options['expression']))
+                ->then(function ($options) {
+                    $options['expression'] = ExpressionLanguage::unprefixExpression($options['expression']);
+
+                    return $options;
+                })
+            ->end()
+            ->children()
+                ->scalarNode('method')->end()
+                ->scalarNode('expression')->end()
+                ->arrayNode('bind')
+                    ->useAttributeAsKey('name')
+                    ->arrayPrototype()
+                        ->children()
+                            ->scalarNode('value')->isRequired()->end()
+                        ->end()
+                    ->end()
+                ->end()
+            ->end()
+        ;
 
         return $node;
     }

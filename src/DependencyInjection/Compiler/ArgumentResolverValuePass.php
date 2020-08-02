@@ -6,6 +6,9 @@ namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 
 use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
+use Overblog\GraphQLBundle\Definition\ArgumentInterface;
+use Overblog\GraphQLBundle\Definition\GlobalVariables;
+use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use Overblog\GraphQLBundle\Resolver\ResolverFactory;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -25,13 +28,17 @@ class ArgumentResolverValuePass implements CompilerPassInterface
         $configs = $container->getParameter('overblog_graphql_types.config');
         foreach ($configs as &$config) {
             foreach ($config['config']['fields'] ?? [] as $name => $field) {
-                if (isset($field['resolver']['method'])) {
-                    $methodName = $field['resolver']['method'];
-                    $bind = $field['resolver']['bind'] ?? [];
-                    list($resolverClass, $resolverMethod) = explode('::', $methodName, 2) + [null, null];
-                    $id = $this->registerAnonymousResolverService(
-                        $container, $argumentMetadataFactory, $resolverClass, $resolverMethod, $bind
-                    );
+                if (isset($field['resolver'])) {
+                    if (!empty($field['resolver']['method'])) {
+                        $methodName = $field['resolver']['method'];
+                        list($resolverClass, $resolverMethod) = explode('::', $methodName, 2) + [null, null];
+                        $id = $this->registerAnonymousResolverServiceForMethod(
+                            $container, $argumentMetadataFactory, $resolverClass, $resolverMethod, $field['resolver']['bind'] ?? []
+                        );
+                    } else {
+                        $expression = $field['resolver']['expression'];
+                        $id = $this->registerAnonymousResolverServiceForExpression($container, $expression);
+                    }
                     // TODO(mcg-web): use id directly in TypeBuilder
                     $config['config']['fields'][$name]['resolve'] = sprintf('@=res(\'%s\', [value, args, context, info])', $id);
                     $config['config']['fields'][$name]['resolver']['id'] = $id;
@@ -49,7 +56,27 @@ class ArgumentResolverValuePass implements CompilerPassInterface
         );
     }
 
-    private function registerAnonymousResolverService(
+    private function registerAnonymousResolverServiceForExpression(
+        ContainerBuilder $container,
+        string $expressionString
+    ): string {
+        $id = $this->generateAnonymousResolverId($expressionString, null, []);
+        if (!$container->hasDefinition($id)) {
+            $container->register($id, Closure::class)
+                ->setFactory([new Reference(ResolverFactory::class), 'createExpressionResolver'])
+                ->setArguments([
+                    $expressionString,
+                    new Reference(ExpressionConverter::class),
+                    new Reference(GlobalVariables::class),
+                ])
+                ->addTag('overblog_graphql.resolver')
+            ;
+        }
+
+        return $id;
+    }
+
+    private function registerAnonymousResolverServiceForMethod(
         ContainerBuilder $container,
         ArgumentMetadataFactory $argumentMetadataFactory,
         string $resolverClass,
@@ -123,6 +150,7 @@ class ArgumentResolverValuePass implements CompilerPassInterface
             '$info' => '$info',
             '$context' => '$context',
             ResolveInfo::class => '$info',
+            ArgumentInterface::class => '$args',
         ];
         $argumentValues = [];
         $arguments = $argumentMetadataFactory->createArgumentMetadata($resolver);

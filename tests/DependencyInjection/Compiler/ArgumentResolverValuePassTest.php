@@ -7,7 +7,10 @@ namespace Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler;
 use Closure;
 use Overblog\GraphQLBundle\Definition\Argument;
 use Overblog\GraphQLBundle\Definition\ArgumentFactory;
+use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ArgumentResolverValuePass;
+use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
+use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use Overblog\GraphQLBundle\Resolver\ResolverFactory;
 use Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler\fixtures\Foo;
 use PHPUnit\Framework\TestCase;
@@ -28,6 +31,8 @@ class ArgumentResolverValuePassTest extends TestCase
         $this->container->setParameter('kernel.debug', false);
         $this->container->register(stdClass::class, stdClass::class);
         $this->container->set(ResolverFactory::class, new ResolverFactory(new ArgumentFactory(Argument::class)));
+        $this->container->set(GlobalVariables::class, new GlobalVariables());
+        $this->container->set(ExpressionConverter::class, new ExpressionConverter(new ExpressionLanguage()));
         $this->compilerPass = new ArgumentResolverValuePass();
     }
 
@@ -39,30 +44,42 @@ class ArgumentResolverValuePassTest extends TestCase
     /**
      * @dataProvider resolverDataProvider
      */
-    public function testResolver(string $class, ?string $method, array $expectedDefinitionArgs): void
+    public function testCreateResolver(string $class, ?string $method, array $expectedDefinitionArgs): void
     {
         $configs = [
             'foo' => [
                 'type' => 'object',
                 'config' => [
-                    'fields' => [$method => ['resolver' => ['method' => $method ? $class.'::'.$method : $class]]],
+                    'fields' => ['test' => ['resolver' => ['method' => $method ? $class.'::'.$method : $class]]],
                 ],
             ],
         ];
 
         $this->processCompilerPass($configs);
-        $resolverId = $this->container->getParameter('overblog_graphql_types.config')['foo']['config']['fields'][$method]['resolver']['id'];
-
-        $expectedDefinition = (new Definition(Closure::class, $expectedDefinitionArgs))
-            ->setFactory([new Reference(ResolverFactory::class), 'createResolver'])
-            ->addTag('overblog_graphql.resolver');
-
-        $this->assertEquals(
-            $expectedDefinition,
-            $this->container->getDefinition($resolverId),
+        $this->assertDefinition(
+            $expectedDefinitionArgs,
+            $this->container->getParameter('overblog_graphql_types.config')['foo']['config']['fields']['test']['resolver']['id'],
+            'createResolver'
         );
-        $resolver = $this->container->get($resolverId);
-        $this->assertInstanceOf(Closure::class, $resolver);
+    }
+
+    public function testCreateExpressionResolver(): void
+    {
+        $configs = [
+            'foo' => [
+                'type' => 'object',
+                'config' => [
+                    'fields' => ['testExpression' => ['resolver' => ['expression' => 'value']]],
+                ],
+            ],
+        ];
+
+        $this->processCompilerPass($configs);
+        $this->assertDefinition(
+            ['value', new Reference(ExpressionConverter::class), new Reference(GlobalVariables::class)],
+            $this->container->getParameter('overblog_graphql_types.config')['foo']['config']['fields']['testExpression']['resolver']['id'],
+            'createExpressionResolver'
+        );
     }
 
     public function resolverDataProvider(): iterable
@@ -139,6 +156,20 @@ class ArgumentResolverValuePassTest extends TestCase
                 ],
             ],
         ];
+    }
+
+    private function assertDefinition(array $expectedDefinitionArgs, string $resolverId, string $factoryMethod): void
+    {
+        $expectedDefinition = (new Definition(Closure::class, $expectedDefinitionArgs))
+            ->setFactory([new Reference(ResolverFactory::class), $factoryMethod])
+            ->addTag('overblog_graphql.resolver');
+
+        $this->assertEquals(
+            $expectedDefinition,
+            $this->container->getDefinition($resolverId),
+        );
+        $resolver = $this->container->get($resolverId);
+        $this->assertInstanceOf(Closure::class, $resolver);
     }
 
     private function processCompilerPass(array $configs, ?ArgumentResolverValuePass $compilerPass = null): void

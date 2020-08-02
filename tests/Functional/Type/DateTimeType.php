@@ -39,10 +39,7 @@ class DateTimeType
         return new DateTime($valueNode->value);
     }
 
-    /**
-     * @param mixed $_
-     */
-    public static function getDateTime($_, ArgumentInterface $args): ?DateTime
+    public static function getDateTime(ArgumentInterface $args): ?DateTime
     {
         return $args['dateTime'] ?? new DateTime('2016-11-28 12:00:00');
     }

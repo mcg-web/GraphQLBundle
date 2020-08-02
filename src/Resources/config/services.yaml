@@ -104,7 +104,7 @@ services:
 
     Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter:
         arguments:
-            - '@Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage'
+            - '@overblog_graphql.expression_language'
 
     Overblog\GraphQLBundle\Generator\TypeBuilder:
         arguments:

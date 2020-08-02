@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Config;
 
+use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
 use function is_string;
@@ -26,6 +27,27 @@ abstract class TypeWithOutputFieldsDefinition extends TypeDefinition
                 ->ifTrue(fn ($options) => is_string($options))
                 ->then(fn ($options) => ['type' => $options])
             ->end()
+            ->beforeNormalization()
+                ->ifTrue(fn ($options) => !empty($options['resolve']) && empty($options['resolver']))
+                ->then(function ($options) {
+                    if (is_callable($options['resolve'])) {
+                        if (is_array($options['resolve'])) {
+                            $options['resolver']['method'] = join('::', $options['resolve']);
+                        } else {
+                            $options['resolver']['method'] = $options['resolve'];
+                        }
+                    } elseif (is_string($options['resolve'])) {
+                        $options['resolver']['expression'] = ExpressionLanguage::stringHasTrigger($options['resolve']) ?
+                            ExpressionLanguage::unprefixExpression($options['resolve']) :
+                            json_encode($options['resolve']);
+                    } else {
+                        $options['resolver']['expression'] = json_encode($options['resolve']);
+                    }
+                    unset($options['resolve']);
+
+                    return $options;
+                })
+            ->end()
             ->validate()
                 // Remove empty entries
                 ->always(function ($value) {
@@ -39,6 +61,10 @@ abstract class TypeWithOutputFieldsDefinition extends TypeDefinition
 
                     return $value;
                 })
+            ->end()
+            ->validate()
+                ->ifTrue(fn (array $v) => !empty($v['resolver']) && !empty($v['resolve']))
+                ->thenInvalid('"resolver" and "resolve" should not be use together in "%s".')
             ->end()
             ->children()
                 ->append($this->typeSection())
@@ -71,25 +97,7 @@ abstract class TypeWithOutputFieldsDefinition extends TypeDefinition
                 ->variableNode('resolve')
                     ->info('Value resolver (expression language can be used here)')
                 ->end()
-                ->arrayNode('resolver')
-                    ->info('Value resolver')
-                    ->beforeNormalization()
-                        // Allow resolver short syntax
-                        ->ifTrue(fn ($options) => is_string($options))
-                        ->then(fn ($options) => ['method' => $options])
-                    ->end()
-                    ->children()
-                        ->scalarNode('method')->isRequired()->end()
-                        ->arrayNode('bind')
-                            ->useAttributeAsKey('name')
-                            ->arrayPrototype()
-                                ->children()
-                                    ->scalarNode('value')->isRequired()->end()
-                                ->end()
-                            ->end()
-                        ->end()
-                    ->end()
-                ->end()
+                ->append($this->resolverSection('resolver', 'GraphQL value resolver'))
                 ->append($this->descriptionSection())
                 ->append($this->deprecationReasonSection())
                 ->variableNode('access')
