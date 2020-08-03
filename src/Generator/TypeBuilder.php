@@ -395,7 +395,7 @@ class TypeBuilder
         }
 
         if (!empty($constraints)) {
-            // If there are only constarainst, dont use additional nesting
+            // If there are only constraints, dont use additional nesting
             if (0 === $array->count()) {
                 return $this->buildConstraints($constraints);
             }

@@ -8,5 +8,5 @@ use GraphQL\Type\Schema;
 
 interface SchemaExtensionInterface
 {
-    public function process(Schema $schema); // @phpstan-ignore-line
+    public function process(Schema $schema): void;
 }

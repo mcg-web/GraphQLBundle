@@ -43,11 +43,23 @@ abstract class TypeWithOutputFieldsDefinition extends TypeDefinition
                     } else {
                         $options['resolver']['expression'] = json_encode($options['resolve']);
                     }
+
+                    return $options;
+                })
+            ->end()
+            ->beforeNormalization()
+                ->ifTrue(fn ($options) => array_key_exists('resolve', $options))
+                ->then(function ($options) {
                     unset($options['resolve']);
 
                     return $options;
                 })
             ->end()
+            ->validate()
+                ->ifTrue(fn (array $v) => !empty($v['resolver']) && !empty($v['resolve']))
+                ->thenInvalid('"resolver" and "resolve" should not be use together in "%s".')
+            ->end()
+
             ->validate()
                 // Remove empty entries
                 ->always(function ($value) {
@@ -61,10 +73,6 @@ abstract class TypeWithOutputFieldsDefinition extends TypeDefinition
 
                     return $value;
                 })
-            ->end()
-            ->validate()
-                ->ifTrue(fn (array $v) => !empty($v['resolver']) && !empty($v['resolve']))
-                ->thenInvalid('"resolver" and "resolve" should not be use together in "%s".')
             ->end()
             ->children()
                 ->append($this->typeSection())
@@ -93,9 +101,6 @@ abstract class TypeWithOutputFieldsDefinition extends TypeDefinition
                             ->append($this->validationSection(self::VALIDATION_LEVEL_PROPERTY))
                         ->end()
                     ->end()
-                ->end()
-                ->variableNode('resolve')
-                    ->info('Value resolver (expression language can be used here)')
                 ->end()
                 ->append($this->resolverSection('resolver', 'GraphQL value resolver'))
                 ->append($this->descriptionSection())

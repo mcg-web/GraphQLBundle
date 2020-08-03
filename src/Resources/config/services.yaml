@@ -112,7 +112,7 @@ services:
             - '%overblog_graphql.class_namespace%'
 
     Overblog\GraphQLBundle\Resolver\ResolverFactory:
-        arguments:
-            - '@Overblog\GraphQLBundle\Definition\ArgumentFactory'
         tags:
             - { name: overblog_graphql.global_variable, alias: resolverFactory, public: false }
+
+    Overblog\GraphQLBundle\Resolver\ResolverArgsStack: ~

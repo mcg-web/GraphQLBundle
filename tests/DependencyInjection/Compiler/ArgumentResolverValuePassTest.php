@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler;
 
 use Closure;
-use Overblog\GraphQLBundle\Definition\Argument;
-use Overblog\GraphQLBundle\Definition\ArgumentFactory;
 use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ArgumentResolverValuePass;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
@@ -30,7 +28,7 @@ class ArgumentResolverValuePassTest extends TestCase
         $this->container->setParameter('kernel.bundles', []);
         $this->container->setParameter('kernel.debug', false);
         $this->container->register(stdClass::class, stdClass::class);
-        $this->container->set(ResolverFactory::class, new ResolverFactory(new ArgumentFactory(Argument::class)));
+        $this->container->set(ResolverFactory::class, new ResolverFactory());
         $this->container->set(GlobalVariables::class, new GlobalVariables());
         $this->container->set(ExpressionConverter::class, new ExpressionConverter(new ExpressionLanguage()));
         $this->compilerPass = new ArgumentResolverValuePass();

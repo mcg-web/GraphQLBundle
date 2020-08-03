@@ -10,8 +10,9 @@ services:
         tags:
             - { name: overblog_graphql.definition_config_processor, priority: 512 }
 
-    Overblog\GraphQLBundle\Definition\ConfigProcessor\WrapArgumentConfigProcessor:
+    Overblog\GraphQLBundle\Definition\ConfigProcessor\ResolverArgsStackConfigProcessor:
         arguments:
+            - '@Overblog\GraphQLBundle\Resolver\ResolverArgsStack'
             - '@Overblog\GraphQLBundle\Definition\ArgumentFactory'
         tags:
-            - { name: overblog_graphql.definition_config_processor }
+            - { name: overblog_graphql.definition_config_processor, priority: 10 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\Validator;
 
+use Overblog\GraphQLBundle\Resolver\ResolverArgsStack;
 use Overblog\GraphQLBundle\Validator\InputValidator;
 use Overblog\GraphQLBundle\Validator\ValidatorFactory;
 use PHPUnit\Framework\TestCase;
@@ -28,6 +29,6 @@ class InputValidatorTest extends TestCase
 
         $this->expectException(ServiceNotFoundException::class);
 
-        new InputValidator([], null, $factory, []);
+        new InputValidator(new ResolverArgsStack(), null, $factory, []);
     }
 }

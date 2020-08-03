@@ -7,7 +7,7 @@ namespace Overblog\GraphQLBundle\Validator;
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
-use Overblog\GraphQLBundle\Definition\ArgumentInterface;
+use Overblog\GraphQLBundle\Resolver\ResolverArgsStack;
 use Overblog\GraphQLBundle\Validator\Exception\ArgumentsValidationException;
 use Overblog\GraphQLBundle\Validator\Mapping\MetadataFactory;
 use Overblog\GraphQLBundle\Validator\Mapping\ObjectMetadata;
@@ -42,7 +42,7 @@ class InputValidator
      * InputValidator constructor.
      */
     public function __construct(
-        array $resolverArgs,
+        ResolverArgsStack $resolverArgsStack,
         ?ValidatorInterface $validator,
         ValidatorFactory $factory,
         array $propertiesMapping = [],
@@ -55,7 +55,7 @@ class InputValidator
             );
         }
 
-        $this->resolverArgs = $this->mapResolverArgs(...$resolverArgs);
+        $this->resolverArgs = $this->mapResolverArgs($resolverArgsStack);
         $this->info = $this->resolverArgs['info'];
         $this->propertiesMapping = $propertiesMapping;
         $this->classMapping = $classMapping;
@@ -65,18 +65,15 @@ class InputValidator
     }
 
     /**
-     * Converts a numeric array of resolver args to an associative one.
-     *
-     * @param mixed $value
-     * @param mixed $context
+     * Converts resolverArgs to an associative one.
      */
-    private function mapResolverArgs($value, ArgumentInterface $args, $context, ResolveInfo $info): array
+    private function mapResolverArgs(ResolverArgsStack $resolverArgsStack): array
     {
         return [
-            'value' => $value,
-            'args' => $args,
-            'context' => $context,
-            'info' => $info,
+            'value' => $resolverArgsStack->getCurrentValue(),
+            'args' => $resolverArgsStack->getCurrentArgs(),
+            'context' => $resolverArgsStack->getCurrentContext(),
+            'info' => $resolverArgsStack->getCurrentInfo(),
         ];
     }
 

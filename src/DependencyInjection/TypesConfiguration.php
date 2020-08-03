@@ -121,9 +121,7 @@ class TypesConfiguration implements ConfigurationInterface
 
     private function addBeforeNormalization(ArrayNodeDefinition $node): void
     {
-        $node
-            // process beforeNormalization (should be execute after relay normalization)
-            ->beforeNormalization()
+        $node->beforeNormalization()
                 ->ifTrue(fn ($types) => is_array($types))
                 ->then(fn ($types) => Config\Processor::process($types, Config\Processor::BEFORE_NORMALIZATION))
             ->end()

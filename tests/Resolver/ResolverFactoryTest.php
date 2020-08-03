@@ -7,7 +7,6 @@ namespace Overblog\GraphQLBundle\Tests\Resolver\Argument;
 use ArrayObject;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\Argument;
-use Overblog\GraphQLBundle\Definition\ArgumentFactory;
 use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
@@ -23,7 +22,7 @@ class ResolverFactoryTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->factory = new ResolverFactory(new ArgumentFactory(Argument::class));
+        $this->factory = new ResolverFactory();
     }
 
     /**

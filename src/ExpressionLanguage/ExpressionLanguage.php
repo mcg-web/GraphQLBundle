@@ -61,6 +61,8 @@ class ExpressionLanguage extends BaseExpressionLanguage
         $stream = (new Lexer())->tokenize($expression);
         $current = &$stream->current;
 
+        $contained = false;
+
         while (!$stream->isEOF()) {
             if ($name === $current->value && Token::NAME_TYPE === $current->type) {
                 // Also check that it's not a function's name
@@ -75,7 +77,7 @@ class ExpressionLanguage extends BaseExpressionLanguage
             $stream->next();
         }
 
-        return $contained ?? false;
+        return $contained;
     }
 
     /**
