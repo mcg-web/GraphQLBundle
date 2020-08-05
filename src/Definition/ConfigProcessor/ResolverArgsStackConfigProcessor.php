@@ -9,6 +9,7 @@ use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\ArgumentFactory;
 use Overblog\GraphQLBundle\Definition\LazyConfig;
+use Overblog\GraphQLBundle\Resolver\ResolverArgs;
 use Overblog\GraphQLBundle\Resolver\ResolverArgsStack;
 use function is_array;
 use function is_callable;
@@ -62,13 +63,10 @@ final class ResolverArgsStackConfigProcessor implements ConfigProcessorInterface
 
     private function wrapResolver(callable $resolver): Closure
     {
-        $stack = $this->resolverArgsStack;
+        $resolverArgsStack = $this->resolverArgsStack;
 
-        return $this->argumentFactory->wrapResolverArgs(static function ($value, $args, ArrayObject $context, ResolveInfo $info) use ($resolver, $stack) {
-            $stack->setCurrentValue($value)
-                ->setCurrentArgs($args)
-                ->setCurrentContext($context)
-                ->setCurrentInfo($info);
+        return $this->argumentFactory->wrapResolverArgs(static function ($value, $args, ArrayObject $context, ResolveInfo $info) use ($resolver, $resolverArgsStack) {
+            $resolverArgsStack->setCurrentResolverArgs(new ResolverArgs($value, $args, $context, $info));
 
             return $resolver(...func_get_args());
         });

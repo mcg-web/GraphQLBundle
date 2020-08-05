@@ -6,7 +6,6 @@ namespace Overblog\GraphQLBundle\Validator;
 
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ObjectType;
-use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Resolver\ResolverArgsStack;
 use Overblog\GraphQLBundle\Validator\Exception\ArgumentsValidationException;
 use Overblog\GraphQLBundle\Validator\Mapping\MetadataFactory;
@@ -27,12 +26,11 @@ class InputValidator
     private const TYPE_PROPERTY = 'property';
     private const TYPE_GETTER = 'getter';
 
-    private array $resolverArgs;
+    private ResolverArgsStack $resolverArgsStack;
     private array $propertiesMapping;
     private array $classMapping;
     private ValidatorInterface $validator;
     private MetadataFactory $metadataFactory;
-    private ResolveInfo $info;
     private ValidatorFactory $validatorFactory;
 
     /** @var ClassMetadataInterface[] */
@@ -54,27 +52,12 @@ class InputValidator
                 Symfony Validator Component first. See: 'https://symfony.com/doc/current/validation.html'"
             );
         }
-
-        $this->resolverArgs = $this->mapResolverArgs($resolverArgsStack);
-        $this->info = $this->resolverArgs['info'];
+        $this->resolverArgsStack = $resolverArgsStack;
         $this->propertiesMapping = $propertiesMapping;
         $this->classMapping = $classMapping;
         $this->validator = $validator;
         $this->validatorFactory = $factory;
         $this->metadataFactory = new MetadataFactory();
-    }
-
-    /**
-     * Converts resolverArgs to an associative one.
-     */
-    private function mapResolverArgs(ResolverArgsStack $resolverArgsStack): array
-    {
-        return [
-            'value' => $resolverArgsStack->getCurrentValue(),
-            'args' => $resolverArgsStack->getCurrentArgs(),
-            'context' => $resolverArgsStack->getCurrentContext(),
-            'info' => $resolverArgsStack->getCurrentInfo(),
-        ];
     }
 
     /**
@@ -84,13 +67,14 @@ class InputValidator
      */
     public function validate($groups = null, bool $throw = true): ?ConstraintViolationListInterface
     {
-        $rootObject = new ValidationNode($this->info->parentType, $this->info->fieldName, null, $this->resolverArgs);
+        $resolverArgs = $this->resolverArgsStack->getCurrentResolverArgs();
+        $rootObject = new ValidationNode($resolverArgs->getInfo()->parentType, $resolverArgs->getInfo()->fieldName, null, $this->resolverArgsStack->getCurrentResolverArgs());
 
         $this->buildValidationTree(
             $rootObject,
             $this->propertiesMapping,
             $this->classMapping,
-            $this->resolverArgs['args']->getArrayCopy()
+            $this->resolverArgsStack->getCurrentResolverArgs()->getArgs()->getArrayCopy()
         );
 
         $validator = $this->validatorFactory->createValidator($this->metadataFactory);
@@ -211,7 +195,7 @@ class InputValidator
         }
 
         return $this->buildValidationTree(
-            new ValidationNode($type, null, $parent, $this->resolverArgs),
+            new ValidationNode($type, null, $parent, $this->resolverArgsStack->getCurrentResolverArgs()),
             $propertiesMapping,
             $classMapping,
             $value

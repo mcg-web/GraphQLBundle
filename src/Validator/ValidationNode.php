@@ -9,6 +9,7 @@ use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use Overblog\GraphQLBundle\Definition\Argument;
+use Overblog\GraphQLBundle\Resolver\ResolverArgs;
 use function in_array;
 
 /**
@@ -43,11 +44,11 @@ class ValidationNode
      */
     private array $__resolverArgs;
 
-    public function __construct(Type $type, string $field = null, ?ValidationNode $parent = null, array $resolverArgs = [])
+    public function __construct(Type $type, string $field = null, ?ValidationNode $parent = null, ?ResolverArgs $resolverArgs = null)
     {
         $this->__type = $type;
         $this->__fieldName = $field;
-        $this->__resolverArgs = $resolverArgs;
+        $this->__resolverArgs = null === $resolverArgs ? [] : $resolverArgs->toArray(true);
 
         if (null !== $parent) {
             $this->__parent = $parent;

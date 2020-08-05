@@ -4,71 +4,25 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Resolver;
 
-use ArrayObject;
-use GraphQL\Type\Definition\ResolveInfo;
-use Overblog\GraphQLBundle\Definition\ArgumentInterface;
-
 final class ResolverArgsStack
 {
-    /** @var mixed */
-    private $currentValue;
+    private ResolverArgs $currentResolverArgs;
 
-    private ArgumentInterface $currentArgs;
-
-    private ArrayObject $currentContext;
-
-    private ResolveInfo $currentInfo;
-
-    /**
-     * @return mixed
-     */
-    public function getCurrentValue()
+    public function __construct(?ResolverArgs $currentResolverArgs = null)
     {
-        return $this->currentValue;
+        if (null !== $currentResolverArgs) {
+            $this->currentResolverArgs = $currentResolverArgs;
+        }
     }
 
-    /**
-     * @param mixed $currentValue
-     */
-    public function setCurrentValue($currentValue): self
+    public function getCurrentResolverArgs(): ?ResolverArgs
     {
-        $this->currentValue = $currentValue;
-
-        return $this;
+        return $this->currentResolverArgs;
     }
 
-    public function getCurrentArgs(): ?ArgumentInterface
+    public function setCurrentResolverArgs(ResolverArgs $currentResolverArgs): self
     {
-        return $this->currentArgs;
-    }
-
-    public function setCurrentArgs(ArgumentInterface $currentArgs): self
-    {
-        $this->currentArgs = $currentArgs;
-
-        return $this;
-    }
-
-    public function getCurrentContext(): ?ArrayObject
-    {
-        return $this->currentContext;
-    }
-
-    public function setCurrentContext(ArrayObject $currentContext): self
-    {
-        $this->currentContext = $currentContext;
-
-        return $this;
-    }
-
-    public function getCurrentInfo(): ?ResolveInfo
-    {
-        return $this->currentInfo;
-    }
-
-    public function setCurrentInfo(ResolveInfo $currentInfo): self
-    {
-        $this->currentInfo = $currentInfo;
+        $this->currentResolverArgs = $currentResolverArgs;
 
         return $this;
     }

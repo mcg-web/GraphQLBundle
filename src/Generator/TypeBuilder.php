@@ -28,16 +28,11 @@ use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\Definition\LazyConfig;
 use Overblog\GraphQLBundle\Definition\Type\CustomScalarType;
 use Overblog\GraphQLBundle\Definition\Type\GeneratedTypeInterface;
-use Overblog\GraphQLBundle\Error\ResolveErrors;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use Overblog\GraphQLBundle\Generator\Exception\GeneratorException;
-use Overblog\GraphQLBundle\Validator\InputValidator;
 use RuntimeException;
-use function array_filter;
-use function array_intersect;
 use function array_map;
-use function array_replace_recursive;
 use function class_exists;
 use function count;
 use function explode;
@@ -50,7 +45,6 @@ use function key;
 use function ltrim;
 use function reset;
 use function rtrim;
-use function str_split;
 use function strpos;
 use function strrchr;
 use function strtolower;
@@ -290,7 +284,7 @@ class TypeBuilder
      * @throws GeneratorException
      * @throws UnrecognizedValueTypeException
      */
-    protected function buildResolve($resolve, ?array $validationConfig = null)
+    protected function buildResolve($resolve)
     {
         if (is_callable($resolve) && is_array($resolve)) {
             return Collection::numeric($resolve);
@@ -302,70 +296,12 @@ class TypeBuilder
 
         // TODO (murtukov): replace usage of converter with ExpressionLanguage static method
         if ($this->expressionConverter->check($resolve)) {
-            $injectErrors = ExpressionLanguage::expressionContainsVar('errors', $resolve);
-
-            if ($injectErrors) {
-                $closure->append('$errors = ', Instance::new(ResolveErrors::class));
-            }
-
-            $injectValidator = ExpressionLanguage::expressionContainsVar('validator', $resolve);
-
-            if (null !== $validationConfig) {
-                $this->buildValidator($closure, $validationConfig, $injectValidator, $injectErrors);
-            } elseif (true === $injectValidator) {
-                throw new GeneratorException(
-                    'Unable to inject an instance of the InputValidator. No validation constraints provided. '.
-                    'Please remove the "validator" argument from the list of dependencies of your resolver '.
-                    'or provide validation configs.'
-                );
-            }
-
             $closure->append('return ', $this->expressionConverter->convert($resolve));
-
-            return $closure;
+        } else {
+            $closure->append('return ', Utils::stringify($resolve));
         }
-
-        $closure->append('return ', Utils::stringify($resolve));
 
         return $closure;
-    }
-
-    protected function buildValidator(Closure $closure, array $mapping, bool $injectValidator, bool $injectErrors): void
-    {
-        $validator = Instance::new(InputValidator::class)
-            ->setMultiline()
-            ->addArgument(new Literal('\\func_get_args()'))
-            ->addArgument("$this->globalVars->get('container')->get('validator')")
-            ->addArgument("$this->globalVars->get('validatorFactory')");
-
-        if (!empty($mapping['properties'])) {
-            $validator->addArgument($this->buildProperties($mapping['properties']));
-        }
-
-        if (!empty($mapping['class'])) {
-            $validator->addArgument($this->buildValidationRules($mapping['class']));
-        }
-
-        $closure->append('$validator = ', $validator);
-
-        // If auto-validation on or errors are injected
-        if (!$injectValidator || $injectErrors) {
-            if (!empty($mapping['validationGroups'])) {
-                $validationGroups = Collection::numeric($mapping['validationGroups']);
-            } else {
-                $validationGroups = 'null';
-            }
-
-            $closure->emptyLine();
-
-            if ($injectErrors) {
-                $closure->append('$errors->setValidationErrors($validator->validate(', $validationGroups, ', false))');
-            } else {
-                $closure->append('$validator->validate(', $validationGroups, ')');
-            }
-
-            $closure->emptyLine();
-        }
     }
 
     protected function buildValidationRules(array $mapping): Collection
@@ -532,8 +468,7 @@ class TypeBuilder
 
         // only for object types
         if (isset($resolve)) {
-            $validationConfig = $this->restructureObjectValidationConfig($fieldConfig);
-            $field->addItem('resolve', $this->buildResolve($resolve, $validationConfig));
+            $field->addItem('resolve', $this->buildResolve($resolve));
         }
 
         if (isset($deprecationReason)) {
@@ -702,59 +637,9 @@ class TypeBuilder
         $fieldConfig['validation']['cascade']['referenceType'] = trim($fieldConfig['type'], '[]!');
     }
 
-    // TODO (murtukov): rework this method to use builders
-    protected function restructureObjectValidationConfig(array $fieldConfig): ?array
-    {
-        $properties = [];
-
-        foreach ($fieldConfig['args'] ?? [] as $name => $arg) {
-            if (empty($arg['validation'])) {
-                continue;
-            }
-
-            $properties[$name] = $arg['validation'];
-
-            if (empty($arg['validation']['cascade'])) {
-                continue;
-            }
-
-            $properties[$name]['cascade']['isCollection'] = $this->isCollectionType($arg['type']);
-            $properties[$name]['cascade']['referenceType'] = trim($arg['type'], '[]!');
-        }
-
-        // Merge class and field constraints
-        $classValidation = $this->config['validation'] ?? [];
-
-        if (!empty($fieldConfig['validation'])) {
-            $classValidation = array_replace_recursive($classValidation, $fieldConfig['validation']);
-        }
-
-        $mapping = [];
-
-        if (!empty($properties)) {
-            $mapping['properties'] = $properties;
-        }
-
-        // class
-        if (!empty($classValidation)) {
-            $mapping['class'] = $classValidation;
-        }
-
-        // validationGroups
-        if (!empty($fieldConfig['validationGroups'])) {
-            $mapping['validationGroups'] = $fieldConfig['validationGroups'];
-        }
-
-        if (empty($classValidation) && !array_filter($properties)) {
-            return null;
-        } else {
-            return $mapping;
-        }
-    }
-
     protected function isCollectionType(string $type): bool
     {
-        return 2 === count(array_intersect(['[', ']'], str_split($type)));
+        return '[' === $type[0];
     }
 
     /**

@@ -27,7 +27,7 @@ class TypeGenerator
 
     private static bool $classMapLoaded = false;
     private ?string $cacheDir;
-    protected int $cacheDirMask;
+    protected ?int $cacheDirMask;
     private array $configs;
     private bool $useClassMap;
     private ?string $baseCacheDir;
