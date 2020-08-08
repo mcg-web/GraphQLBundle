@@ -428,17 +428,6 @@ class TypeBuilder
         return $result; // @phpstan-ignore-line
     }
 
-    protected function buildProperties(array $properties): Collection
-    {
-        $array = Collection::assoc();
-
-        foreach ($properties as $name => $props) {
-            $array->addItem($name, $this->buildValidationRules($props));
-        }
-
-        return $array; // @phpstan-ignore-line
-    }
-
     /**
      * @return GeneratorInterface|Collection|string
      *
@@ -633,13 +622,8 @@ class TypeBuilder
             return;
         }
 
-        $fieldConfig['validation']['cascade']['isCollection'] = $this->isCollectionType($fieldConfig['type']);
+        $fieldConfig['validation']['cascade']['isCollection'] = '[' === $fieldConfig['type'][0];
         $fieldConfig['validation']['cascade']['referenceType'] = trim($fieldConfig['type'], '[]!');
-    }
-
-    protected function isCollectionType(string $type): bool
-    {
-        return '[' === $type[0];
     }
 
     /**

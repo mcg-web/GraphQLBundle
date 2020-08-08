@@ -114,5 +114,3 @@ services:
     Overblog\GraphQLBundle\Resolver\ResolverFactory:
         tags:
             - { name: overblog_graphql.global_variable, alias: resolverFactory, public: false }
-
-    Overblog\GraphQLBundle\Resolver\ResolverArgsStack: ~

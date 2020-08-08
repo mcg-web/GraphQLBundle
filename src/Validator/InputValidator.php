@@ -6,11 +6,13 @@ namespace Overblog\GraphQLBundle\Validator;
 
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\ObjectType;
-use Overblog\GraphQLBundle\Resolver\ResolverArgsStack;
+use Overblog\GraphQLBundle\Error\ResolveErrors;
+use Overblog\GraphQLBundle\Resolver\ResolverArgs;
+use Overblog\GraphQLBundle\Resolver\TypeResolver;
 use Overblog\GraphQLBundle\Validator\Exception\ArgumentsValidationException;
 use Overblog\GraphQLBundle\Validator\Mapping\MetadataFactory;
 use Overblog\GraphQLBundle\Validator\Mapping\ObjectMetadata;
-use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
+use RuntimeException;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\Constraints\GroupSequence;
 use Symfony\Component\Validator\Constraints\Valid;
@@ -26,12 +28,13 @@ class InputValidator
     private const TYPE_PROPERTY = 'property';
     private const TYPE_GETTER = 'getter';
 
-    private ResolverArgsStack $resolverArgsStack;
+    private ?ResolverArgs $resolverArgs;
     private array $propertiesMapping;
     private array $classMapping;
     private ValidatorInterface $validator;
     private MetadataFactory $metadataFactory;
     private ValidatorFactory $validatorFactory;
+    private TypeResolver $typeResolver;
 
     /** @var ClassMetadataInterface[] */
     private array $cachedMetadata = [];
@@ -40,24 +43,40 @@ class InputValidator
      * InputValidator constructor.
      */
     public function __construct(
-        ResolverArgsStack $resolverArgsStack,
-        ?ValidatorInterface $validator,
+        ?ResolverArgs $resolverArgs,
+        ValidatorInterface $validator,
         ValidatorFactory $factory,
+        TypeResolver $typeResolver,
         array $propertiesMapping = [],
         array $classMapping = []
     ) {
-        if (null === $validator) {
-            throw new ServiceNotFoundException(
-                "The 'validator' service is not found. To use the 'InputValidator' you need to install the
-                Symfony Validator Component first. See: 'https://symfony.com/doc/current/validation.html'"
-            );
-        }
-        $this->resolverArgsStack = $resolverArgsStack;
+        $this->resolverArgs = $resolverArgs;
         $this->propertiesMapping = $propertiesMapping;
         $this->classMapping = $classMapping;
         $this->validator = $validator;
         $this->validatorFactory = $factory;
         $this->metadataFactory = new MetadataFactory();
+        $this->typeResolver = $typeResolver;
+    }
+
+    public function setResolverArgs(ResolverArgs $resolverArgs): self
+    {
+        $this->resolverArgs = $resolverArgs;
+
+        return $this;
+    }
+
+    /**
+     * @param string|array|null $groups
+     *
+     * @throws ArgumentsValidationException
+     */
+    public function createResolveErrors($groups = null): ResolveErrors
+    {
+        $errors = new ResolveErrors();
+        $errors->setValidationErrors($this->validate($groups, false));
+
+        return $errors;
     }
 
     /**
@@ -67,14 +86,17 @@ class InputValidator
      */
     public function validate($groups = null, bool $throw = true): ?ConstraintViolationListInterface
     {
-        $resolverArgs = $this->resolverArgsStack->getCurrentResolverArgs();
-        $rootObject = new ValidationNode($resolverArgs->getInfo()->parentType, $resolverArgs->getInfo()->fieldName, null, $this->resolverArgsStack->getCurrentResolverArgs());
+        if (null === $this->resolverArgs) {
+            throw new RuntimeException(sprintf('Resolver args are required to method "%s".', __METHOD__));
+        }
+
+        $rootObject = new ValidationNode($this->resolverArgs->getInfo()->parentType, $this->resolverArgs->getInfo()->fieldName, null, $this->resolverArgs);
 
         $this->buildValidationTree(
             $rootObject,
             $this->propertiesMapping,
             $this->classMapping,
-            $this->resolverArgsStack->getCurrentResolverArgs()->getArgs()->getArrayCopy()
+            $this->resolverArgs->getArgs()->getArrayCopy()
         );
 
         $validator = $this->validatorFactory->createValidator($this->metadataFactory);
@@ -105,7 +127,9 @@ class InputValidator
                 $options = $params['cascade'];
 
                 /** @var ObjectType|InputObjectType $type */
-                $type = $options['referenceType'];
+                $type = is_string($options['referenceType']) ?
+                    $this->typeResolver->resolve($options['referenceType']) :
+                    $options['referenceType'];
 
                 if ($options['isCollection']) {
                     $rootObject->$property = $this->createCollectionNode($args[$property], $type, $rootObject);
@@ -195,7 +219,7 @@ class InputValidator
         }
 
         return $this->buildValidationTree(
-            new ValidationNode($type, null, $parent, $this->resolverArgsStack->getCurrentResolverArgs()),
+            new ValidationNode($type, null, $parent, $this->resolverArgs),
             $propertiesMapping,
             $classMapping,
             $value
