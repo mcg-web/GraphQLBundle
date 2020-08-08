@@ -7,12 +7,12 @@ namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
-use Murtukov\PHPCodeGenerator\Instance;
 use Overblog\GraphQLBundle\Definition\ArgumentInterface;
 use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\Error\ResolveErrors;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
-use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
+use Overblog\GraphQLBundle\ExpressionLanguage\ResolverExpression;
+use Overblog\GraphQLBundle\Resolver\ResolverArgs;
 use Overblog\GraphQLBundle\Resolver\ResolverFactory;
 use Overblog\GraphQLBundle\Resolver\TypeResolver;
 use Overblog\GraphQLBundle\Validator\InputValidator;
@@ -24,18 +24,19 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadataFactory;
 use function is_array;
 use function is_string;
 
-class ArgumentResolverValuePass implements CompilerPassInterface
+class ResolveNamedArgumentsPass implements CompilerPassInterface
 {
     public function process(ContainerBuilder $container): void
     {
         $argumentMetadataFactory = new ArgumentMetadataFactory();
         $configs = $container->getParameter('overblog_graphql_types.config');
-        foreach ($configs as &$config) {
-            foreach ($config['config']['fields'] ?? [] as $name => $field) {
+        foreach ($configs as $typeName => &$config) {
+            foreach ($config['config']['fields'] ?? [] as $fieldName => $field) {
                 if (isset($field['resolver'])) {
                     if (!empty($field['resolver']['method'])) {
                         $methodName = $field['resolver']['method'];
@@ -43,19 +44,13 @@ class ArgumentResolverValuePass implements CompilerPassInterface
                         $resolverDefinition = $this->createAnonymousResolverDefinitionForMethod(
                             $container, $argumentMetadataFactory, $resolverClass, $resolverMethod, $field['resolver']['bind'] ?? []
                         );
-
-                        $requiredInputValidator = in_array('$validator', $resolverDefinition->getArgument(1));
-                        $requiredInputValidatorErrors = in_array('$errors', $resolverDefinition->getArgument(1));
                     } else {
                         $expression = $field['resolver']['expression'];
                         $resolverDefinition = $this->createAnonymousResolverDefinitionForExpression($expression);
-
-                        $requiredInputValidator = ExpressionLanguage::expressionContainsVar('validator', $expression);
-                        $requiredInputValidatorErrors = ExpressionLanguage::expressionContainsVar('errors', $expression);
                     }
                     $mapping = $this->restructureObjectValidationConfig(
                         $config['config'],
-                        $config['config']['fields'][$name]
+                        $config['config']['fields'][$fieldName]
                     );
                     $inputValidatorDefinition = null;
                     $validationGroups = null;
@@ -69,37 +64,48 @@ class ArgumentResolverValuePass implements CompilerPassInterface
                         $resolverDefinition
                             ->setArgument('$validator', $inputValidatorDefinition)
                             ->setArgument('$validationGroups', $validationGroups);
+                    } elseif (in_array('$validator', $resolverDefinition->getArgument(1) ?? [])) {
+                        throw new InvalidArgumentException(
+                            'Unable to inject an instance of the InputValidator. No validation constraints provided. '.
+                            'Please remove the "validator" argument from the list of dependencies of your resolver '.
+                            'or provide validation configs.'
+                        );
                     }
 
-                    $container->setDefinition($id = $this->generateAnonymousResolverId($resolverDefinition), $resolverDefinition);
-
-                    // TODO(mcg-web): use id directly in TypeBuilder
-                    $config['config']['fields'][$name]['resolve'] = sprintf('@=res(\'%s\', [value, args, context, info])', $id);
-                    $config['config']['fields'][$name]['resolver']['id'] = $id;
+                    $container->setDefinition(
+                        $id = sprintf('overblog_graphql.%s_%s_resolver', $config['config']['name'] ?? $typeName, $fieldName),
+                        $resolverDefinition->setPublic(true)
+                    );
+                    $config['config']['fields'][$fieldName]['resolver']['id'] = $id;
                 }
             }
         }
         $container->setParameter('overblog_graphql_types.config', $configs);
     }
 
-    private function generateAnonymousResolverId(Definition $definition): string
-    {
-        return sprintf(
-            'overblog_graphql.anonymous_resolver_%s',
-            substr(sha1(serialize($definition)), 0, 12)
-        );
-    }
-
     private function createAnonymousResolverDefinitionForExpression(string $expressionString): Definition
     {
+        $requiredInputValidator = ExpressionLanguage::expressionContainsVar('validator', $expressionString);
+        $requiredInputValidatorErrors = ExpressionLanguage::expressionContainsVar('errors', $expressionString);
+
+        $definition = (new Definition(ResolverExpression::class))
+            ->addArgument(
+                (new Definition(Expression::class))->addArgument($expressionString)
+            )
+        ;
+
         return (new Definition(Closure::class))
-            ->setFactory([new Reference(ResolverFactory::class), 'createExpressionResolver'])
+            ->setFactory([new Reference(ResolverFactory::class), 'createResolver'])
             ->setArguments([
-                $expressionString,
-                new Reference(ExpressionConverter::class),
-                new Reference(GlobalVariables::class),
+                $definition,
+                [
+                    '$resolverArgs',
+                    new Reference(GlobalVariables::class),
+                    new Reference('overblog_graphql.expression_language'),
+                    $requiredInputValidator || $requiredInputValidatorErrors ? '$validator' : null,
+                    $requiredInputValidatorErrors ? '$errors' : null,
+                ],
             ])
-            ->addTag('overblog_graphql.resolver')
         ;
     }
 
@@ -139,7 +145,6 @@ class ArgumentResolverValuePass implements CompilerPassInterface
                 $this->resolverReference($resolver, $resolverRef, $isStatic),
                 $this->resolveArgumentValues($container, $argumentMetadataFactory, $resolver, $bind),
             ])
-            ->addTag('overblog_graphql.resolver')
         ;
     }
 
@@ -191,6 +196,8 @@ class ArgumentResolverValuePass implements CompilerPassInterface
             '$context' => '$context',
             '$validator' => '$validator',
             '$errors' => '$errors',
+            '$resolverArgs' => '$resolverArgs',
+            ResolverArgs::class => '$resolverArgs',
             ResolveErrors::class => '$errors',
             InputValidator::class => '$validator',
             ResolveInfo::class => '$info',
@@ -357,6 +364,7 @@ class ArgumentResolverValuePass implements CompilerPassInterface
          * @var string $referenceType
          * @var array  $groups
          * @var bool   $isCollection
+         *
          * @phpstan-ignore-next-line
          */
         extract($cascade);
@@ -366,11 +374,11 @@ class ArgumentResolverValuePass implements CompilerPassInterface
             $result['groups'] = $groups;
         }
 
-        if (isset($isCollection)) {
+        if (isset($isCollection)) { // @phpstan-ignore-line
             $result['isCollection'] = $isCollection;
         }
 
-        if (isset($referenceType)) {
+        if (isset($referenceType)) { // @phpstan-ignore-line
             $type = trim($referenceType, '[]!');
 
             if (in_array($type, [Type::STRING, Type::INT, Type::FLOAT, Type::BOOLEAN, Type::ID])) {

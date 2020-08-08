@@ -7,9 +7,6 @@ namespace Overblog\GraphQLBundle\Tests\Resolver\Argument;
 use ArrayObject;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\Argument;
-use Overblog\GraphQLBundle\Definition\GlobalVariables;
-use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
-use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use Overblog\GraphQLBundle\Resolver\ResolverFactory;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -33,14 +30,6 @@ class ResolverFactoryTest extends TestCase
     {
         $resolver = $this->factory->createResolver(fn ($v) => $v, $argumentValues);
         $this->assertSame($expected, $resolver(...$resolverArgs));
-    }
-
-    public function testCreateExpressionResolve(): void
-    {
-        $resolver = $this->factory->createExpressionResolver('[value, args, context, info]', new ExpressionConverter(new ExpressionLanguage()), new GlobalVariables());
-
-        $expected = [new stdClass(), new Argument(), new ArrayObject(), $this->createMock(ResolveInfo::class)];
-        $this->assertSame($expected, $resolver(...$expected));
     }
 
     /**

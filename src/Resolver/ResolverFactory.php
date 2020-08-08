@@ -8,15 +8,12 @@ use ArrayObject;
 use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\ArgumentInterface;
-use Overblog\GraphQLBundle\Definition\GlobalVariables;
-use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
-use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use Overblog\GraphQLBundle\Validator\InputValidator;
 use function is_string;
 
 final class ResolverFactory
 {
-    private const GRAPHQL_RESOLVER_ARGS = ['$value', '$args', '$context', '$info', '$validator', '$errors'];
+    private const GRAPHQL_RESOLVER_ARGS = ['$value', '$args', '$context', '$info', '$validator', '$errors', '$resolverArgs'];
 
     private int $countGraphQLResolverArgs;
 
@@ -25,44 +22,19 @@ final class ResolverFactory
         $this->countGraphQLResolverArgs = count(self::GRAPHQL_RESOLVER_ARGS);
     }
 
-    public function createExpressionResolver(string $expression, ExpressionConverter $expressionConverter, GlobalVariables $globalVariables, ?InputValidator $validator = null, ?array $validationGroups = null): Closure
+    public function createResolver(callable $handler, array $handlerArgs, ?InputValidator $validator = null, ?array $validationGroups = null): Closure
     {
-        $requiredInputValidator = ExpressionLanguage::expressionContainsVar('validator', $expression);
-        $requiredInputValidatorErrors = ExpressionLanguage::expressionContainsVar('errors', $expression);
+        $requiredInputValidator = in_array('$validator', $handlerArgs);
+        $requiredInputValidatorErrors = in_array('$errors', $handlerArgs);
 
-        /** @phpstan-ignore-next-line */
-        return static function ($value, ArgumentInterface $args, ArrayObject $context, ResolveInfo $info) use ($expressionConverter, $expression, $globalVariables, $validator, $requiredInputValidator, $requiredInputValidatorErrors, $validationGroups) {
+        $handlerArgs = array_values($handlerArgs);
+        $useDefaultArguments = $this->canUseDefaultArguments($handlerArgs);
+
+        return static function ($value, ArgumentInterface $args, ArrayObject $context, ResolveInfo $info) use ($handler, $handlerArgs, $validator, $requiredInputValidator, $requiredInputValidatorErrors, $validationGroups, $useDefaultArguments) {
             $errors = null;
+            $resolverArgs = new ResolverArgs(...func_get_args());
             if (null !== $validator) {
-                $validator->setResolverArgs(new ResolverArgs(...func_get_args()));
-                if ($requiredInputValidatorErrors) {
-                    $errors = $validator->createResolveErrors($validationGroups);
-                } elseif (!$requiredInputValidator) {
-                    $validator->validate($validationGroups);
-                }
-            }
-
-            static $code = null;
-            if (null === $code) {
-                $code = sprintf('return (static function() use ($value, $args, $context, $info, $validator, $errors, $globalVariables) { return %s; })();', $expressionConverter->convert($expression));
-            }
-
-            return eval($code);
-        };
-    }
-
-    public function createResolver(callable $handler, array $resolverArgs, ?InputValidator $validator = null, ?array $validationGroups = null): Closure
-    {
-        $requiredInputValidator = in_array('$validator', $resolverArgs);
-        $requiredInputValidatorErrors = in_array('$errors', $resolverArgs);
-
-        $resolverArgs = array_values($resolverArgs);
-        $useDefaultArguments = $this->canUseDefaultArguments($resolverArgs);
-
-        return static function ($value, ArgumentInterface $args, ArrayObject $context, ResolveInfo $info) use ($handler, $resolverArgs, $validator, $requiredInputValidator, $requiredInputValidatorErrors, $validationGroups, $useDefaultArguments) {
-            $errors = null;
-            if (null !== $validator) {
-                $validator->setResolverArgs(new ResolverArgs(...func_get_args()));
+                $validator->setResolverArgs($resolverArgs);
 
                 if ($requiredInputValidatorErrors) {
                     $errors = $validator->createResolveErrors($validationGroups);
@@ -73,12 +45,12 @@ final class ResolverFactory
             if ($useDefaultArguments) {
                 $resolvedResolverArgs = [...func_get_args(), $validator, $errors];
             } else {
-                $resolvedResolverArgs = $resolverArgs;
+                $resolvedResolverArgs = $handlerArgs;
 
                 static $needResolveArgs = null;
                 if (null === $needResolveArgs) {
                     $needResolveArgs = [];
-                    foreach ($resolverArgs as $index => $argumentValue) {
+                    foreach ($handlerArgs as $index => $argumentValue) {
                         if (is_string($argumentValue) && '$' === $argumentValue[0]) {
                             $needResolveArgs[$index] = ltrim($argumentValue, '$');
                         }

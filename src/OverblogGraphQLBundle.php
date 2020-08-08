@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle;
 
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\AliasedPass;
-use Overblog\GraphQLBundle\DependencyInjection\Compiler\ArgumentResolverValuePass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ConfigParserPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ConfigProcessorPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\GlobalVariablesPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\MutationTaggedServiceMappingTaggedPass;
+use Overblog\GraphQLBundle\DependencyInjection\Compiler\ResolveNamedArgumentsPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ResolverMapTaggedServiceMappingPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ResolverMethodAliasesPass;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ResolverTaggedServiceMappingPass;
@@ -44,7 +44,7 @@ class OverblogGraphQLBundle extends Bundle
         $container->addCompilerPass(new ResolverMethodAliasesPass());
         $container->addCompilerPass(new AliasedPass());
         $container->addCompilerPass(new ResolverMapTaggedServiceMappingPass());
-        $container->addCompilerPass(new ArgumentResolverValuePass());
+        $container->addCompilerPass(new ResolveNamedArgumentsPass());
         $container->addCompilerPass(new TypeGeneratorPass(), PassConfig::TYPE_BEFORE_REMOVING);
         $container->addCompilerPass(new TypeTaggedServiceMappingPass(), PassConfig::TYPE_BEFORE_REMOVING);
         $container->addCompilerPass(new ResolverTaggedServiceMappingPass(), PassConfig::TYPE_BEFORE_REMOVING);

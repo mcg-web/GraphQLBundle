@@ -284,7 +284,7 @@ class TypeBuilder
      * @throws GeneratorException
      * @throws UnrecognizedValueTypeException
      */
-    protected function buildResolve($resolve)
+    protected function buildResolve($resolve, bool $isServiceId = false)
     {
         if (is_callable($resolve) && is_array($resolve)) {
             return Collection::numeric($resolve);
@@ -294,11 +294,24 @@ class TypeBuilder
             ->addArguments('value', 'args', 'context', 'info')
             ->bindVar(TypeGenerator::GLOBAL_VARS);
 
-        // TODO (murtukov): replace usage of converter with ExpressionLanguage static method
-        if ($this->expressionConverter->check($resolve)) {
-            $closure->append('return ', $this->expressionConverter->convert($resolve));
+        if ($isServiceId) {
+            $closure->append(
+                'return ',
+                sprintf(
+                    '(%s->get(\'container\')->get(\'%s\'))(...func_get_args())',
+                    $this->globalVars,
+                    $resolve
+                )
+            );
+
+            $closure->addUse('function func_get_args');
         } else {
-            $closure->append('return ', Utils::stringify($resolve));
+            // TODO (mcg-web): delete after migrating
+            if ($this->expressionConverter->check($resolve)) {
+                $closure->append('return ', $this->expressionConverter->convert($resolve));
+            } else {
+                $closure->append('return ', Utils::stringify($resolve));
+            }
         }
 
         return $closure;
@@ -437,12 +450,13 @@ class TypeBuilder
     public function buildField(array $fieldConfig /*, $fieldname */)
     {
         /**
-         * @var string      $type
-         * @var string|null $resolve
-         * @var string|null $description
-         * @var array|null  $args
-         * @var string|null $complexity
-         * @var string|null $deprecationReason
+         * @var string                $type
+         * @var int|string|array|null $resolve
+         * @var string|null           $resolver
+         * @var string|null           $description
+         * @var array|null            $args
+         * @var string|null           $complexity
+         * @var string|null           $deprecationReason
          * @phpstan-ignore-next-line
          */
         extract($fieldConfig);
@@ -456,7 +470,9 @@ class TypeBuilder
             ->addItem('type', $this->buildType($type));
 
         // only for object types
-        if (isset($resolve)) {
+        if (isset($resolver['id'])) {
+            $field->addItem('resolve', $this->buildResolve($resolver['id'], true));
+        } elseif (isset($resolve)) {
             $field->addItem('resolve', $this->buildResolve($resolve));
         }
 

@@ -239,22 +239,34 @@ class ConfigParserPassTest extends TestCase
                             'createdAt' => [
                                 'description' => 'The creation date of the object',
                                 'type' => 'Int!',
-                                'resolve' => '@=value.createdAt',
+                                'resolver' => [
+                                    'expression' => 'value.createdAt',
+                                    'bind' => [],
+                                ],
                             ],
                             'updatedAt' => [
                                 'description' => 'The update date of the object',
                                 'type' => 'Int!',
-                                'resolve' => '@=value.updatedAt',
+                                'resolver' => [
+                                    'expression' => 'value.updatedAt',
+                                    'bind' => [],
+                                ],
                             ],
                             'rawIDWithDescriptionOverride' => [
                                 'description' => 'rawIDWithDescriptionOverride description',
                                 'type' => 'Int!',
-                                'resolve' => '@=value.id',
+                                'resolver' => [
+                                    'expression' => 'value.id',
+                                    'bind' => [],
+                                ],
                             ],
                             'rawID' => [
                                 'description' => 'The raw ID of an object',
                                 'type' => 'Int!',
-                                'resolve' => '@=value.id',
+                                'resolver' => [
+                                    'expression' => 'value.id',
+                                    'bind' => [],
+                                ],
                             ],
                             'rawIDs' => [
                                 'type' => '[RawID!]!',
@@ -325,9 +337,12 @@ class ConfigParserPassTest extends TestCase
                         'fields' => [
                             'foo' => [
                                 'type' => 'FooPayload!',
-                                'resolve' => '@=mutation("Mutation.foo", [args["input"]])',
                                 'args' => [
                                     'input' => ['type' => 'FooInput!'],
+                                ],
+                                'resolver' => [
+                                    'expression' => 'mutation("Mutation.foo", [args["input"]])',
+                                    'bind' => [],
                                 ],
                             ],
                         ],

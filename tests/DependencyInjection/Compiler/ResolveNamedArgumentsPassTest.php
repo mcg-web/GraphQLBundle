@@ -6,8 +6,9 @@ namespace Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler;
 
 use Closure;
 use Overblog\GraphQLBundle\Definition\GlobalVariables;
-use Overblog\GraphQLBundle\DependencyInjection\Compiler\ArgumentResolverValuePass;
+use Overblog\GraphQLBundle\DependencyInjection\Compiler\ResolveNamedArgumentsPass;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
+use Overblog\GraphQLBundle\ExpressionLanguage\ResolverExpression;
 use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use Overblog\GraphQLBundle\Resolver\ResolverFactory;
 use Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler\fixtures\Foo;
@@ -16,11 +17,12 @@ use stdClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
+use Symfony\Component\ExpressionLanguage\Expression;
 
-class ArgumentResolverValuePassTest extends TestCase
+class ResolveNamedArgumentsPassTest extends TestCase
 {
     private ContainerBuilder $container;
-    private ArgumentResolverValuePass $compilerPass;
+    private ResolveNamedArgumentsPass $compilerPass;
 
     public function setUp(): void
     {
@@ -28,10 +30,11 @@ class ArgumentResolverValuePassTest extends TestCase
         $this->container->setParameter('kernel.bundles', []);
         $this->container->setParameter('kernel.debug', false);
         $this->container->register(stdClass::class, stdClass::class);
+        $this->container->set('overblog_graphql.expression_language', new ExpressionLanguage());
         $this->container->set(ResolverFactory::class, new ResolverFactory());
         $this->container->set(GlobalVariables::class, new GlobalVariables());
         $this->container->set(ExpressionConverter::class, new ExpressionConverter(new ExpressionLanguage()));
-        $this->compilerPass = new ArgumentResolverValuePass();
+        $this->compilerPass = new ResolveNamedArgumentsPass();
     }
 
     public function tearDown(): void
@@ -63,20 +66,32 @@ class ArgumentResolverValuePassTest extends TestCase
 
     public function testCreateExpressionResolver(): void
     {
+        $expressionString = 'value';
         $configs = [
             'foo' => [
                 'type' => 'object',
                 'config' => [
-                    'fields' => ['testExpression' => ['resolver' => ['expression' => 'value']]],
+                    'fields' => ['testExpression' => ['resolver' => ['expression' => $expressionString]]],
                 ],
             ],
         ];
 
         $this->processCompilerPass($configs);
         $this->assertDefinition(
-            ['value', new Reference(ExpressionConverter::class), new Reference(GlobalVariables::class)],
+            [
+                (new Definition(ResolverExpression::class))->addArgument(
+                    (new Definition(Expression::class))->addArgument($expressionString)
+                ),
+                [
+                    '$resolverArgs',
+                    new Reference(GlobalVariables::class),
+                    new Reference('overblog_graphql.expression_language'),
+                    null,
+                    null,
+                ],
+            ],
             $this->container->getParameter('overblog_graphql_types.config')['foo']['config']['fields']['testExpression']['resolver']['id'],
-            'createExpressionResolver'
+            'createResolver'
         );
     }
 
@@ -160,7 +175,7 @@ class ArgumentResolverValuePassTest extends TestCase
     {
         $expectedDefinition = (new Definition(Closure::class, $expectedDefinitionArgs))
             ->setFactory([new Reference(ResolverFactory::class), $factoryMethod])
-            ->addTag('overblog_graphql.resolver');
+            ->setPublic(true);
 
         $this->assertEquals(
             $expectedDefinition,
@@ -170,7 +185,7 @@ class ArgumentResolverValuePassTest extends TestCase
         $this->assertInstanceOf(Closure::class, $resolver);
     }
 
-    private function processCompilerPass(array $configs, ?ArgumentResolverValuePass $compilerPass = null): void
+    private function processCompilerPass(array $configs, ?ResolveNamedArgumentsPass $compilerPass = null): void
     {
         $container = $container ?? $this->container;
         $compilerPass = $compilerPass ?? $this->compilerPass;

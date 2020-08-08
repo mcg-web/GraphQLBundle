@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\Functional\Generator;
 
-use Overblog\GraphQLBundle\Generator\Exception\GeneratorException;
 use Overblog\GraphQLBundle\Tests\Functional\TestCase;
+use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use function json_decode;
 
 class TypeGeneratorTest extends TestCase
@@ -59,10 +59,12 @@ class TypeGeneratorTest extends TestCase
     /**
      * Defining the `cascade` validation option on scalar types
      * should throw an exception.
+     *
+     * TODO(mcg-web): move this in ResolveNamedArgumentsPassTest
      */
     public function testCascadeOnScalarasThrowsException(): void
     {
-        $this->expectException(GeneratorException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Cascade validation cannot be applied to built-in types.');
 
         parent::setUp();
@@ -72,11 +74,13 @@ class TypeGeneratorTest extends TestCase
     /**
      * Defining a validation constraint which doesn't exist should
      * throw an exception.
+     *
+     * TODO(mcg-web): move this in ResolveNamedArgumentsPassTest
      */
     public function testNonExistentConstraintThrowsException(): void
     {
-        $this->expectException(GeneratorException::class);
-        $this->expectExceptionMessage("Constraint class 'Symfony\Component\Validator\Constraints\BlahBlah' doesn't exist.");
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Constraint class "Symfony\Component\Validator\Constraints\BlahBlah" doesn\'t exist.');
 
         parent::setUp();
         static::bootKernel(['test_case' => 'nonexistentConstraint']);
@@ -85,10 +89,12 @@ class TypeGeneratorTest extends TestCase
     /**
      * Injecting the `validator` constraint into a resolver without having
      * any constraints defined in the type should throw an exception.
+     *
+     * TODO(mcg-web): move this in ResolveNamedArgumentsPassTest
      */
     public function testInjectValidatorWithoutConstraintsThrowsException(): void
     {
-        $this->expectException(GeneratorException::class);
+        $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage(
             'Unable to inject an instance of the InputValidator. No validation constraints provided. '.
             'Please remove the "validator" argument from the list of dependencies of your resolver '.
