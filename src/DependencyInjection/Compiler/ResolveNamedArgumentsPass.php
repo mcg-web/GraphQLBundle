@@ -48,30 +48,12 @@ class ResolveNamedArgumentsPass implements CompilerPassInterface
                         $expression = $field['resolver']['expression'];
                         $resolverDefinition = $this->createAnonymousResolverDefinitionForExpression($expression);
                     }
-                    $mapping = $this->restructureObjectValidationConfig(
-                        $config['config'],
-                        $config['config']['fields'][$fieldName]
+                    $this->addValidatorRequirementsToResolverDefinition(
+                        $container,
+                        $resolverDefinition,
+                        $config,
+                        $fieldName,
                     );
-                    $inputValidatorDefinition = null;
-                    $validationGroups = null;
-                    if (null !== $mapping) {
-                        $inputValidatorDefinition = $this->createAnonymousInputValidatorDefinition(
-                            $mapping['properties'] ?? [],
-                            $mapping['class'] ?? []
-                        );
-                        $validationGroups = $mapping['validationGroups'] ?? null;
-
-                        $resolverDefinition
-                            ->setArgument('$validator', $inputValidatorDefinition)
-                            ->setArgument('$validationGroups', $validationGroups);
-                    } elseif (in_array('$validator', $resolverDefinition->getArgument(1) ?? [])) {
-                        throw new InvalidArgumentException(
-                            'Unable to inject an instance of the InputValidator. No validation constraints provided. '.
-                            'Please remove the "validator" argument from the list of dependencies of your resolver '.
-                            'or provide validation configs.'
-                        );
-                    }
-
                     $container->setDefinition(
                         $id = sprintf('overblog_graphql.%s_%s_resolver', $config['config']['name'] ?? $typeName, $fieldName),
                         $resolverDefinition->setPublic(true)
@@ -81,6 +63,41 @@ class ResolveNamedArgumentsPass implements CompilerPassInterface
             }
         }
         $container->setParameter('overblog_graphql_types.config', $configs);
+    }
+
+    private function addValidatorRequirementsToResolverDefinition(
+        ContainerBuilder $container, Definition $resolverDefinition, array $config, $fieldName
+    ): void
+    {
+        $mapping = $this->restructureObjectValidationConfig(
+            $config['config'],
+            $config['config']['fields'][$fieldName]
+        );
+        $inputValidatorDefinition = null;
+        $validationGroups = null;
+        if (null !== $mapping) {
+            if (!$container->has('validator')) {
+                throw new ServiceNotFoundException(
+                    "The 'validator' service is not found. To use the 'InputValidator' you need to install the
+                    Symfony Validator Component first. See: 'https://symfony.com/doc/current/validation.html'"
+                );
+            }
+            $inputValidatorDefinition = $this->createAnonymousInputValidatorDefinition(
+                $mapping['properties'] ?? [],
+                $mapping['class'] ?? []
+            );
+            $validationGroups = $mapping['validationGroups'] ?? null;
+
+            $resolverDefinition
+                ->setArgument('$validator', $inputValidatorDefinition)
+                ->setArgument('$validationGroups', $validationGroups);
+        } elseif (in_array('$validator', $resolverDefinition->getArgument(1) ?? [])) {
+            throw new InvalidArgumentException(
+                'Unable to inject an instance of the InputValidator. No validation constraints provided. '.
+                'Please remove the "validator" argument from the list of dependencies of your resolver '.
+                'or provide validation configs.'
+            );
+        }
     }
 
     private function createAnonymousResolverDefinitionForExpression(string $expressionString): Definition
