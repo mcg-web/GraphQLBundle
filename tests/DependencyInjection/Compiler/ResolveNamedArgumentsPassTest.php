@@ -103,7 +103,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'valueWithTypehint',
             [
                 [Foo::class, 'valueWithTypehint'],
-                ['value' => '$value'],
+                ['$value'],
             ],
         ];
         yield [
@@ -111,11 +111,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'allNotOrder',
             [
                 [Foo::class, 'allNotOrder'],
-                [
-                    'value' => '$value',
-                    'info' => '$info',
-                    'args' => '$args',
-                ],
+                ['$info', '$args', '$value'],
             ],
         ];
         yield [
@@ -123,7 +119,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'infoTypehint',
             [
                 [Foo::class, 'infoTypehint'],
-                ['test' => '$info'],
+                ['$info'],
             ],
         ];
         yield [
@@ -131,7 +127,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'infoWithoutTypehint',
             [
                 [Foo::class, 'infoWithoutTypehint'],
-                ['info' => '$info'],
+                ['$info'],
             ],
         ];
         yield [
@@ -139,7 +135,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'defaultValue',
             [
                 [Foo::class, 'defaultValue'],
-                ['default' => []],
+                [[]],
             ],
         ];
         yield [
@@ -147,7 +143,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'staticMethod',
             [
                     Foo::class.'::staticMethod',
-                    ['args' => '$args'],
+                    ['$args'],
             ],
         ];
         yield [
@@ -163,10 +159,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'injection',
             [
                 [Foo::class, 'injection'],
-                [
-                    'value' => '$value',
-                    'object' => new Reference(stdClass::class),
-                ],
+                ['$value', new Reference(stdClass::class)],
             ],
         ];
     }

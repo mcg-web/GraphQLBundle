@@ -195,11 +195,7 @@ abstract class TypeDefinition
                 ->scalarNode('expression')->end()
                 ->arrayNode('bind')
                     ->useAttributeAsKey('name')
-                    ->arrayPrototype()
-                        ->children()
-                            ->scalarNode('value')->isRequired()->end()
-                        ->end()
-                    ->end()
+                    ->prototype('variable')->end()
                 ->end()
             ->end()
         ;
