@@ -79,9 +79,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
         $this->processCompilerPass($configs);
         $this->assertDefinition(
             [
-                (new Definition(ResolverExpression::class))->addArgument(
-                    (new Definition(Expression::class))->addArgument($expressionString)
-                ),
+                new Definition(ResolverExpression::class, [new Definition(Expression::class, [$expressionString])]),
                 [
                     '$resolverArgs',
                     new Reference(GlobalVariables::class),

@@ -60,7 +60,7 @@ class TypeGeneratorTest extends TestCase
      * Defining the `cascade` validation option on scalar types
      * should throw an exception.
      *
-     * TODO(mcg-web): move this in ResolveNamedArgumentsPassTest
+     * TODO(mcg-web): move this in ResolverInputValidatorArgumentPassTest
      */
     public function testCascadeOnScalarasThrowsException(): void
     {
@@ -75,7 +75,7 @@ class TypeGeneratorTest extends TestCase
      * Defining a validation constraint which doesn't exist should
      * throw an exception.
      *
-     * TODO(mcg-web): move this in ResolveNamedArgumentsPassTest
+     * TODO(mcg-web): move this in ResolverInputValidatorArgumentPassTest
      */
     public function testNonExistentConstraintThrowsException(): void
     {
@@ -90,7 +90,7 @@ class TypeGeneratorTest extends TestCase
      * Injecting the `validator` constraint into a resolver without having
      * any constraints defined in the type should throw an exception.
      *
-     * TODO(mcg-web): move this in ResolveNamedArgumentsPassTest
+     * TODO(mcg-web): move this in ResolverInputValidatorArgumentPassTest
      */
     public function testInjectValidatorWithoutConstraintsThrowsException(): void
     {
