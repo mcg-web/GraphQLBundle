@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 
 use GraphQL\Type\Definition\Type;
-use Overblog\GraphQLBundle\Resolver\TypeResolver;
-use Overblog\GraphQLBundle\Validator\InputValidator;
-use Overblog\GraphQLBundle\Validator\ValidatorFactory;
+use Overblog\GraphQLBundle\Validator\InputValidatorFactory;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
@@ -20,117 +18,125 @@ class ResolverInputValidatorArgumentPass implements CompilerPassInterface
 {
     public function process(ContainerBuilder $container): void
     {
+        $typeValidationConfigs = [];
+
         $configs = $container->getParameter('overblog_graphql_types.config');
-        foreach ($configs as $typeName => &$config) {
+        foreach ($configs as $typeName => $config) {
+            $typeName = $config['config']['name'] ?? $typeName;
+            $typeValidationConfig = $this->buildTypeValidationConfig(
+                $config['type'],
+                $config['config'],
+            );
+            if (null !== $typeValidationConfig) {
+                $typeValidationConfigs[$typeName] = $typeValidationConfig;
+            }
             foreach ($config['config']['fields'] ?? [] as $fieldName => $field) {
                 if (isset($field['resolver']['id'])) {
                     $resolverDefinition = $container->getDefinition($field['resolver']['id']);
-                    $this->addValidatorRequirementsToResolverDefinition(
-                        $container,
-                        $resolverDefinition,
-                        $config['config'],
-                        $config['config']['fields'][$fieldName],
-                    );
+
+                    $inputValidatorDefinition = null;
+                    $validationGroups = null;
+                    if (isset($typeValidationConfig['fields'][$fieldName])) {
+                        $inputValidatorDefinition = new Reference(InputValidatorFactory::class);
+                        $validationGroups = $typeValidationConfig['fields'][$fieldName]['validationGroups'] ?? null;
+                    } elseif (in_array('$validator', $resolverDefinition->getArgument(1) ?? [])) {
+                        throw new InvalidArgumentException(
+                            'Unable to inject an instance of the InputValidator. No validation constraints provided. '.
+                            'Please remove the "validator" argument from the list of dependencies of your resolver '.
+                            'or provide validation configs.'
+                        );
+                    }
+
+                    $resolverDefinition
+                        ->setArgument('$inputValidatorFactory', $inputValidatorDefinition)
+                        ->setArgument('$validationGroups', $validationGroups);
                 }
             }
         }
-    }
 
-    private function addValidatorRequirementsToResolverDefinition(
-        ContainerBuilder $container, Definition $resolverDefinition, array $typeConfig, array $fieldConfig
-    ): void {
-        $mapping = $this->restructureObjectValidationConfig($typeConfig, $fieldConfig);
-        $inputValidatorDefinition = null;
-        $validationGroups = null;
-        if (null !== $mapping) {
+        if (!empty($typeValidationConfigs)) {
             if (!$container->has('validator')) {
                 throw new ServiceNotFoundException(
                     "The 'validator' service is not found. To use the 'InputValidator' you need to install the
                     Symfony Validator Component first. See: 'https://symfony.com/doc/current/validation.html'"
                 );
             }
-            $inputValidatorDefinition = $this->createAnonymousInputValidatorDefinition(
-                $mapping['properties'] ?? [],
-                $mapping['class'] ?? []
-            );
-            $validationGroups = $mapping['validationGroups'] ?? null;
 
-            $resolverDefinition
-                ->setArgument('$validator', $inputValidatorDefinition)
-                ->setArgument('$validationGroups', $validationGroups);
-        } elseif (in_array('$validator', $resolverDefinition->getArgument(1) ?? [])) {
-            throw new InvalidArgumentException(
-                'Unable to inject an instance of the InputValidator. No validation constraints provided. '.
-                'Please remove the "validator" argument from the list of dependencies of your resolver '.
-                'or provide validation configs.'
-            );
+            $container->register(InputValidatorFactory::class, InputValidatorFactory::class)
+                ->setAutowired(true)
+                ->setBindings(['$typeValidationConfigs' => $typeValidationConfigs]);
         }
     }
 
-    private function createAnonymousInputValidatorDefinition(
-        array $propertiesMapping,
-        array $classMapping
-    ): Definition {
-        return (new Definition(InputValidator::class))
-            ->setArguments([
-                null,
-                new Reference('validator'),
-                new Reference(ValidatorFactory::class),
-                new Reference(TypeResolver::class),
-                array_map([$this, 'buildValidationRules'], $propertiesMapping),
-                $this->buildValidationRules($classMapping),
-            ])
-            ->addTag('overblog_graphql.input_validator')
-            ;
-    }
-
-    private function restructureObjectValidationConfig(array $config, array $fieldConfig): ?array
+    private function buildTypeValidationConfig(string $type, array $typeConfig): ?array
     {
-        $properties = [];
+        $typeValidationConfig = null;
 
-        foreach ($fieldConfig['args'] ?? [] as $name => $arg) {
-            if (empty($arg['validation'])) {
-                continue;
+        if (isset($typeConfig['validation'])) {
+            $typeValidationConfig['validation'] = $this->buildValidationRules($typeConfig['validation']);
+        }
+
+        $fieldsValidationConfig = null;
+
+        foreach ($typeConfig['fields'] ?? [] as $fieldName => $fieldConfig) {
+            $properties = [];
+            if (
+                'input-object' === $type &&
+                !empty($fieldConfig['validation'])
+            ) {
+                $validation = $fieldConfig['validation'];
+                if (!empty($fieldConfig['validation']['cascade'])) {
+                    $validation['cascade']['isCollection'] = '[' === $fieldConfig['type'][0];
+                    $validation['cascade']['referenceType'] = trim($fieldConfig['type'], '[]!');
+                }
+                $fieldsValidationConfig[$fieldName]['validation'] = $this->buildValidationRules($validation);
             }
 
-            $properties[$name] = $arg['validation'];
+            foreach ($fieldConfig['args'] ?? [] as $argName => $arg) {
+                if (empty($arg['validation'])) {
+                    continue;
+                }
 
-            if (empty($arg['validation']['cascade'])) {
-                continue;
+                $properties[$argName] = $arg['validation'];
+
+                if (empty($arg['validation']['cascade'])) {
+                    continue;
+                }
+
+                $properties[$argName]['cascade']['isCollection'] = '[' === $arg['type'][0];
+                $properties[$argName]['cascade']['referenceType'] = trim($arg['type'], '[]!');
             }
 
-            $properties[$name]['cascade']['isCollection'] = '[' === $arg['type'][0];
-            $properties[$name]['cascade']['referenceType'] = trim($arg['type'], '[]!');
+            // Merge class and field constraints
+            $classValidation = $typeConfig['validation'] ?? [];
+
+            if (!empty($fieldConfig['validation'])) {
+                $classValidation = array_replace_recursive($classValidation, $fieldConfig['validation']);
+            }
+
+            // properties
+            $properties = array_filter(array_map([$this, 'buildValidationRules'], $properties));
+
+            if (!empty($properties)) {
+                $fieldsValidationConfig[$fieldName]['properties'] = $properties;
+            }
+
+            // class
+            if (!empty($classValidation)) {
+                $fieldsValidationConfig[$fieldName]['class'] = $this->buildValidationRules($classValidation);
+            }
+
+            // validationGroups
+            if (!empty($fieldConfig['validationGroups'])) {
+                $fieldsValidationConfig[$fieldName]['validationGroups'] = $fieldConfig['validationGroups'];
+            }
         }
 
-        // Merge class and field constraints
-        $classValidation = $config['validation'] ?? [];
-
-        if (!empty($fieldConfig['validation'])) {
-            $classValidation = array_replace_recursive($classValidation, $fieldConfig['validation']);
+        if (null !== $fieldsValidationConfig) {
+            $typeValidationConfig['fields'] = $fieldsValidationConfig;
         }
 
-        $mapping = [];
-
-        if (!empty($properties)) {
-            $mapping['properties'] = $properties;
-        }
-
-        // class
-        if (!empty($classValidation)) {
-            $mapping['class'] = $classValidation;
-        }
-
-        // validationGroups
-        if (!empty($fieldConfig['validationGroups'])) {
-            $mapping['validationGroups'] = $fieldConfig['validationGroups'];
-        }
-
-        if (empty($classValidation) && !array_filter($properties)) {
-            return null;
-        } else {
-            return $mapping;
-        }
+        return $typeValidationConfig;
     }
 
     private function buildValidationRules(array $mapping): array

@@ -19,7 +19,6 @@ use Murtukov\PHPCodeGenerator\ConverterInterface;
 use Murtukov\PHPCodeGenerator\DependencyAwareGenerator;
 use Murtukov\PHPCodeGenerator\Exception\UnrecognizedValueTypeException;
 use Murtukov\PHPCodeGenerator\GeneratorInterface;
-use Murtukov\PHPCodeGenerator\Instance;
 use Murtukov\PHPCodeGenerator\Literal;
 use Murtukov\PHPCodeGenerator\PhpFile;
 use Murtukov\PHPCodeGenerator\Utils;
@@ -33,7 +32,6 @@ use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use Overblog\GraphQLBundle\Generator\Exception\GeneratorException;
 use RuntimeException;
 use function array_map;
-use function class_exists;
 use function count;
 use function explode;
 use function extract;
@@ -41,15 +39,7 @@ use function in_array;
 use function is_array;
 use function is_callable;
 use function is_string;
-use function key;
-use function ltrim;
-use function reset;
-use function rtrim;
-use function strpos;
-use function strrchr;
 use function strtolower;
-use function substr;
-use function trim;
 
 /**
  * TODO (murtukov):
@@ -187,9 +177,9 @@ class TypeBuilder
         }
 
         // only by InputType (class level validation)
-        if (isset($validation)) {
+        /*if (isset($validation)) {
             $configLoader->addItem('validation', $this->buildValidationRules($validation));
-        }
+        }*/
 
         if (!empty($fields)) {
             $configLoader->addItem('fields', ArrowFunction::new(
@@ -317,130 +307,6 @@ class TypeBuilder
         return $closure;
     }
 
-    protected function buildValidationRules(array $mapping): Collection
-    {
-        /**
-         * @var array  $constraints
-         * @var string $link
-         * @var array  $cascade
-         * @phpstan-ignore-next-line
-         */
-        extract($mapping);
-
-        $array = Collection::assoc();
-
-        if (!empty($link)) {
-            if (false === strpos($link, '::')) {
-                // e.g.: App\Entity\Droid
-                $array->addItem('link', $link);
-            } else {
-                // e.g. App\Entity\Droid::$id
-                $array->addItem('link', Collection::numeric($this->normalizeLink($link)));
-            }
-        }
-
-        if (!empty($cascade)) {
-            $array->addItem('cascade', $this->buildCascade($cascade));
-        }
-
-        if (!empty($constraints)) {
-            // If there are only constraints, dont use additional nesting
-            if (0 === $array->count()) {
-                return $this->buildConstraints($constraints);
-            }
-            $array->addItem('constraints', $this->buildConstraints($constraints));
-        }
-
-        return $array; // @phpstan-ignore-line
-    }
-
-    /**
-     * <code>
-     * [
-     *     new NotNull(),
-     *     new Length(['min' => 5, 'max' => 10]),
-     *     ...
-     * ]
-     * </code>.
-     *
-     * @throws GeneratorException
-     */
-    protected function buildConstraints(array $constraints = []): Collection
-    {
-        $result = Collection::numeric()->setMultiline();
-
-        foreach ($constraints as $wrapper) {
-            $name = key($wrapper);
-            $args = reset($wrapper);
-
-            if (false !== strpos($name, '\\')) {
-                // Custom constraint
-                $fqcn = ltrim($name, '\\');
-                $name = ltrim(strrchr($name, '\\'), '\\');
-                $this->file->addUse($fqcn);
-            } else {
-                // Symfony constraint
-                $this->file->addUseGroup(self::CONSTRAINTS_NAMESPACE, $name);
-                $fqcn = self::CONSTRAINTS_NAMESPACE."\\$name";
-            }
-
-            if (!class_exists($fqcn)) {
-                throw new GeneratorException("Constraint class '$fqcn' doesn't exist.");
-            }
-
-            $instance = Instance::new($name);
-
-            if (is_array($args)) {
-                if (isset($args[0]) && is_array($args[0])) {
-                    // Another instance?
-                    $instance->addArgument($this->buildConstraints($args));
-                } else {
-                    // Numeric or Assoc array?
-                    $instance->addArgument(isset($args[0]) ? $args : Collection::assoc($args));
-                }
-            } elseif (null !== $args) {
-                $instance->addArgument($args);
-            }
-
-            $result->push($instance);
-        }
-
-        return $result; // @phpstan-ignore-line
-    }
-
-    /**
-     * @throws GeneratorException
-     */
-    protected function buildCascade(array $cascade): Collection
-    {
-        /**
-         * @var string $referenceType
-         * @var array  $groups
-         * @var bool   $isCollection
-         * @phpstan-ignore-next-line
-         */
-        extract($cascade);
-
-        $result = Collection::assoc()
-            ->addIfNotEmpty('groups', $groups);
-
-        if (isset($isCollection)) {
-            $result->addItem('isCollection', $isCollection);
-        }
-
-        if (isset($referenceType)) {
-            $type = trim($referenceType, '[]!');
-
-            if (in_array($type, self::BUILT_IN_TYPES)) {
-                throw new GeneratorException('Cascade validation cannot be applied to built-in types.');
-            }
-
-            $result->addItem('referenceType', "$this->globalVars->get('typeResolver')->resolve('$referenceType')");
-        }
-
-        return $result; // @phpstan-ignore-line
-    }
-
     /**
      * @return GeneratorInterface|Collection|string
      *
@@ -450,13 +316,12 @@ class TypeBuilder
     public function buildField(array $fieldConfig /*, $fieldname */)
     {
         /**
-         * @var string                $type
-         * @var int|string|array|null $resolve
-         * @var string|null           $resolver
-         * @var string|null           $description
-         * @var array|null            $args
-         * @var string|null           $complexity
-         * @var string|null           $deprecationReason
+         * @var string      $type
+         * @var string|null $resolver
+         * @var string|null $description
+         * @var array|null  $args
+         * @var string|null $complexity
+         * @var string|null $deprecationReason
          * @phpstan-ignore-next-line
          */
         extract($fieldConfig);
@@ -472,8 +337,6 @@ class TypeBuilder
         // only for object types
         if (isset($resolver['id'])) {
             $field->addItem('resolve', $this->buildResolve($resolver['id'], true));
-        } elseif (isset($resolve)) {
-            $field->addItem('resolve', $this->buildResolve($resolve));
         }
 
         if (isset($deprecationReason)) {
@@ -504,10 +367,10 @@ class TypeBuilder
             $field->addItem('useStrictAccess', false);
         }
 
-        if ('input-object' === $this->type && isset($validation)) {
+        /*if ('input-object' === $this->type && isset($validation)) {
             $this->restructureInputValidationConfig($fieldConfig);
             $field->addItem('validation', $this->buildValidationRules($fieldConfig['validation']));
-        }
+        }*/
 
         return $field;
     }
@@ -629,38 +492,5 @@ class TypeBuilder
         }
 
         return $resolveType;
-    }
-
-    // TODO (murtukov): rework this method to use builders
-    protected function restructureInputValidationConfig(array &$fieldConfig): void
-    {
-        if (empty($fieldConfig['validation']['cascade'])) {
-            return;
-        }
-
-        $fieldConfig['validation']['cascade']['isCollection'] = '[' === $fieldConfig['type'][0];
-        $fieldConfig['validation']['cascade']['referenceType'] = trim($fieldConfig['type'], '[]!');
-    }
-
-    /**
-     * Creates and array from a formatted string, e.g.:.
-     *
-     * ```
-     *    "App\Entity\User::$firstName"  -> ['App\Entity\User', 'firstName', 'property']
-     *    "App\Entity\User::firstName()" -> ['App\Entity\User', 'firstName', 'getter']
-     *    "App\Entity\User::firstName"   -> ['App\Entity\User', 'firstName', 'member']
-     * ```.
-     */
-    protected function normalizeLink(string $link): array
-    {
-        [$fqcn, $classMember] = explode('::', $link);
-
-        if ('$' === $classMember[0]) {
-            return [$fqcn, ltrim($classMember, '$'), 'property'];
-        } elseif (')' === substr($classMember, -1)) {
-            return [$fqcn, rtrim($classMember, '()'), 'getter'];
-        } else {
-            return [$fqcn, $classMember, 'member'];
-        }
     }
 }

@@ -8,7 +8,7 @@ use ArrayObject;
 use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\ArgumentInterface;
-use Overblog\GraphQLBundle\Validator\InputValidator;
+use Overblog\GraphQLBundle\Validator\InputValidatorFactory;
 use function is_string;
 
 final class ResolverFactory
@@ -22,7 +22,7 @@ final class ResolverFactory
         $this->countGraphQLResolverArgs = count(self::GRAPHQL_RESOLVER_ARGS);
     }
 
-    public function createResolver(callable $handler, array $handlerArgs, ?InputValidator $validator = null, ?array $validationGroups = null): Closure
+    public function createResolver(callable $handler, array $handlerArgs, ?InputValidatorFactory $inputValidatorFactory = null, ?array $validationGroups = null): Closure
     {
         $requiredInputValidator = in_array('$validator', $handlerArgs);
         $requiredInputValidatorErrors = in_array('$errors', $handlerArgs);
@@ -30,12 +30,12 @@ final class ResolverFactory
         $handlerArgs = array_values($handlerArgs);
         $useDefaultArguments = $this->canUseDefaultArguments($handlerArgs);
 
-        return static function ($value, ArgumentInterface $args, ArrayObject $context, ResolveInfo $info) use ($handler, $handlerArgs, $validator, $requiredInputValidator, $requiredInputValidatorErrors, $validationGroups, $useDefaultArguments) {
+        return static function ($value, ArgumentInterface $args, ArrayObject $context, ResolveInfo $info) use ($handler, $handlerArgs, $inputValidatorFactory, $requiredInputValidator, $requiredInputValidatorErrors, $validationGroups, $useDefaultArguments) {
+            $validator = null;
             $errors = null;
             $resolverArgs = new ResolverArgs(...func_get_args());
-            if (null !== $validator) {
-                $validator->setResolverArgs($resolverArgs);
-
+            if (null !== $inputValidatorFactory) {
+                $validator = $inputValidatorFactory->create($resolverArgs);
                 if ($requiredInputValidatorErrors) {
                     $errors = $validator->createResolveErrors($validationGroups);
                 } elseif (!$requiredInputValidator) {
