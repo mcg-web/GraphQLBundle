@@ -13,9 +13,9 @@ final class TypeValidationConfig
         $this->config = $config;
     }
 
-    public function getValidation(): ?array
+    public function getValidationRules(): ?array
     {
-        return $this->config['validation'] ?? null;
+        return $this->config['validationRules'] ?? null;
     }
 
     public function getField(string $name): ?FieldValidationConfig

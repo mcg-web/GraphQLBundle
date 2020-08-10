@@ -73,7 +73,7 @@ class ResolverInputValidatorArgumentPass implements CompilerPassInterface
         $typeValidationConfig = null;
 
         if (isset($typeConfig['validation'])) {
-            $typeValidationConfig['validation'] = $this->buildValidationRules($typeConfig['validation']);
+            $typeValidationConfig['validationRules'] = $this->buildValidationRules($typeConfig['validation']);
         }
 
         $fieldsValidationConfig = null;
@@ -89,7 +89,7 @@ class ResolverInputValidatorArgumentPass implements CompilerPassInterface
                     $validation['cascade']['isCollection'] = '[' === $fieldConfig['type'][0];
                     $validation['cascade']['referenceType'] = trim($fieldConfig['type'], '[]!');
                 }
-                $fieldsValidationConfig[$fieldName]['validation'] = $this->buildValidationRules($validation);
+                $fieldsValidationConfig[$fieldName]['validationRules'] = $this->buildValidationRules($validation);
             }
 
             foreach ($fieldConfig['args'] ?? [] as $argName => $arg) {
@@ -114,16 +114,15 @@ class ResolverInputValidatorArgumentPass implements CompilerPassInterface
                 $classValidation = array_replace_recursive($classValidation, $fieldConfig['validation']);
             }
 
+            if (!empty($classValidation)) {
+                $fieldsValidationConfig[$fieldName]['class'] = $this->buildValidationRules($classValidation);
+            }
+
             // properties
             $properties = array_filter(array_map([$this, 'buildValidationRules'], $properties));
 
             if (!empty($properties)) {
                 $fieldsValidationConfig[$fieldName]['properties'] = $properties;
-            }
-
-            // class
-            if (!empty($classValidation)) {
-                $fieldsValidationConfig[$fieldName]['class'] = $this->buildValidationRules($classValidation);
             }
 
             // validationGroups

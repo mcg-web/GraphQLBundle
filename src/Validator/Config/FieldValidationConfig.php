@@ -13,9 +13,9 @@ final class FieldValidationConfig
         $this->config = $config;
     }
 
-    public function getValidation(): array
+    public function getValidationRules(): array
     {
-        return $this->config['validation'] ?? [];
+        return $this->config['validationRules'] ?? [];
     }
 
     public function getProperties(): array

@@ -203,14 +203,14 @@ class InputValidator
 
     private function createObjectNode(array $value, InputObjectType $type, ValidationNode $parent): ValidationNode
     {
-        /** @var TypeValidationConfig|null $typeValidationConfig */
+        /** @var TypeValidationConfig $typeValidationConfig */
         $typeValidationConfig = ($this->typeValidationConfigProvider)($type->name);
 
-        $classMapping = null === $typeValidationConfig ? [] : $typeValidationConfig->getValidation();
+        $classMapping = $typeValidationConfig->getValidationRules();
         $propertiesMapping = [];
 
         foreach ($typeValidationConfig->getFields() as $fieldName => $fieldValidationConfig) {
-            $propertiesMapping[$fieldName] = $fieldValidationConfig->getValidation();
+            $propertiesMapping[$fieldName] = $fieldValidationConfig->getValidationRules();
         }
 
         return $this->buildValidationTree(
