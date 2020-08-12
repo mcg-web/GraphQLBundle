@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Validator;
 
-use InvalidArgumentException;
+use Overblog\GraphQLBundle\Resolver\Resolver;
 use Overblog\GraphQLBundle\Resolver\ResolverArgs;
 use Overblog\GraphQLBundle\Resolver\TypeResolver;
 use Overblog\GraphQLBundle\Validator\Config\TypeValidationConfig;
@@ -60,15 +60,10 @@ final class InputValidatorFactory
         return isset($this->typeValidationConfigs[$typeName]);
     }
 
-    public function create(ResolverArgs $resolverArgs): InputValidator
+    public function create(ResolverArgs $resolverArgs): ?InputValidator
     {
-        $type = $resolverArgs->getInfo()->parentType;
-
-        if (!$this->hasTypeValidationConfig($type->name)) {
-            throw new InvalidArgumentException(sprintf(
-                'TypeValidationConfig not found for type "%s".',
-                $type->name
-            ));
+        if (!$this->hasTypeValidationConfig($resolverArgs->getInfo()->parentType->name)) {
+            return null;
         }
 
         return new InputValidator(
@@ -78,5 +73,28 @@ final class InputValidatorFactory
             $this->typeResolver,
             [$this, 'getTypeValidationConfig'],
         );
+    }
+
+    public function createArgs(ResolverArgs $resolverArgs, Resolver $resolver): array
+    {
+        $handlerArgs = $resolver->getHandlerArgs();
+        $requiredInputValidator = in_array('$validator', $handlerArgs);
+        $requiredInputValidatorErrors = in_array('$errors', $handlerArgs);
+        $errors = null;
+        $validator = $this->create($resolverArgs);
+
+        if ($validator) {
+            $fieldValidationConfig = $this->getTypeValidationConfig($resolverArgs->getInfo()->parentType->name)
+                ->getField($resolverArgs->getInfo()->fieldDefinition->name);
+
+            $validationGroups = null === $fieldValidationConfig ? null : $fieldValidationConfig->getValidationGroups();
+            if ($requiredInputValidatorErrors) {
+                $errors = $validator->createResolveErrors($validationGroups);
+            } elseif (!$requiredInputValidator) {
+                $validator->validate($validationGroups);
+            }
+        }
+
+        return ['validator' => $validator, 'errors' => $errors];
     }
 }

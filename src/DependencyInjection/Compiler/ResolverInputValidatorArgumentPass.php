@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 
 use GraphQL\Type\Definition\Type;
+use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use Overblog\GraphQLBundle\Validator\InputValidatorFactory;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -33,12 +34,21 @@ class ResolverInputValidatorArgumentPass implements CompilerPassInterface
             foreach ($config['config']['fields'] ?? [] as $fieldName => $field) {
                 if (isset($field['resolver']['id'])) {
                     $resolverDefinition = $container->getDefinition($field['resolver']['id']);
-
-                    $inputValidatorDefinition = null;
-                    $validationGroups = null;
+                    if (!empty($field['resolver']['expression'])) {
+                        $requiredInputValidator = ExpressionLanguage::expressionContainsVar('validator', $field['resolver']['expression']);
+                        $requiredInputValidatorErrors = ExpressionLanguage::expressionContainsVar('errors', $field['resolver']['expression']);
+                        $handlerArgs = $resolverDefinition->getArgument(1);
+                        $handlerArgs[4] = $requiredInputValidator || $requiredInputValidatorErrors ? '$validator' : null;
+                        $handlerArgs[5] = $requiredInputValidatorErrors ? '$errors' : null;
+                        $resolverDefinition->setArgument(1, $handlerArgs);
+                    }
                     if (isset($typeValidationConfig['fields'][$fieldName])) {
-                        $inputValidatorDefinition = new Reference(InputValidatorFactory::class);
-                        $validationGroups = $typeValidationConfig['fields'][$fieldName]['validationGroups'] ?? null;
+                        $resolverDefinition->addMethodCall(
+                            'addArgumentResolver',
+                            [
+                                [new Reference(InputValidatorFactory::class), 'createArgs'],
+                            ]
+                        );
                     } elseif (in_array('$validator', $resolverDefinition->getArgument(1) ?? [])) {
                         throw new InvalidArgumentException(
                             'Unable to inject an instance of the InputValidator. No validation constraints provided. '.
@@ -46,10 +56,6 @@ class ResolverInputValidatorArgumentPass implements CompilerPassInterface
                             'or provide validation configs.'
                         );
                     }
-
-                    $resolverDefinition
-                        ->setArgument('$inputValidatorFactory', $inputValidatorDefinition)
-                        ->setArgument('$validationGroups', $validationGroups);
                 }
             }
         }

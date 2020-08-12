@@ -18,9 +18,12 @@ final class ResolverExpression
 
     private ?string $compiledCode;
 
-    public function __construct(Expression $expression)
+    /**
+     * @param Expression|string $expression
+     */
+    public function __construct($expression)
     {
-        $this->expression = $expression;
+        $this->expression = $expression instanceof Expression ? $expression : new Expression($expression);
         $this->compiledCode = null;
     }
 

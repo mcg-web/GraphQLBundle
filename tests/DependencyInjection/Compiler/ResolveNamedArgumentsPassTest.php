@@ -4,20 +4,18 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler;
 
-use Closure;
 use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\DependencyInjection\Compiler\ResolveNamedArgumentsPass;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use Overblog\GraphQLBundle\ExpressionLanguage\ResolverExpression;
 use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
-use Overblog\GraphQLBundle\Resolver\ResolverFactory;
+use Overblog\GraphQLBundle\Resolver\Resolver;
 use Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler\fixtures\Foo;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\ExpressionLanguage\Expression;
 
 class ResolveNamedArgumentsPassTest extends TestCase
 {
@@ -31,7 +29,6 @@ class ResolveNamedArgumentsPassTest extends TestCase
         $this->container->setParameter('kernel.debug', false);
         $this->container->register(stdClass::class, stdClass::class);
         $this->container->set('overblog_graphql.expression_language', new ExpressionLanguage());
-        $this->container->set(ResolverFactory::class, new ResolverFactory());
         $this->container->set(GlobalVariables::class, new GlobalVariables());
         $this->container->set(ExpressionConverter::class, new ExpressionConverter(new ExpressionLanguage()));
         $this->compilerPass = new ResolveNamedArgumentsPass();
@@ -79,13 +76,11 @@ class ResolveNamedArgumentsPassTest extends TestCase
         $this->processCompilerPass($configs);
         $this->assertDefinition(
             [
-                new Definition(ResolverExpression::class, [new Definition(Expression::class, [$expressionString])]),
+                new Definition(ResolverExpression::class, [$expressionString]),
                 [
                     '$resolverArgs',
                     new Reference(GlobalVariables::class),
                     new Reference('overblog_graphql.expression_language'),
-                    null,
-                    null,
                 ],
             ],
             $this->container->getParameter('overblog_graphql_types.config')['foo']['config']['fields']['testExpression']['resolver']['id'],
@@ -164,8 +159,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
 
     private function assertDefinition(array $expectedDefinitionArgs, string $resolverId, string $factoryMethod): void
     {
-        $expectedDefinition = (new Definition(Closure::class, $expectedDefinitionArgs))
-            ->setFactory([new Reference(ResolverFactory::class), $factoryMethod])
+        $expectedDefinition = (new Definition(Resolver::class, $expectedDefinitionArgs))
             ->setPublic(true);
 
         $this->assertEquals(
@@ -173,7 +167,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             $this->container->getDefinition($resolverId),
         );
         $resolver = $this->container->get($resolverId);
-        $this->assertInstanceOf(Closure::class, $resolver);
+        $this->assertInstanceOf(Resolver::class, $resolver);
     }
 
     private function processCompilerPass(array $configs, ?ResolveNamedArgumentsPass $compilerPass = null): void

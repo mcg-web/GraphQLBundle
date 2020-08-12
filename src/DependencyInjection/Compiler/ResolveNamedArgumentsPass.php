@@ -4,15 +4,13 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\DependencyInjection\Compiler;
 
-use Closure;
 use GraphQL\Type\Definition\ResolveInfo;
 use Overblog\GraphQLBundle\Definition\ArgumentInterface;
 use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\Error\ResolveErrors;
-use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use Overblog\GraphQLBundle\ExpressionLanguage\ResolverExpression;
+use Overblog\GraphQLBundle\Resolver\Resolver;
 use Overblog\GraphQLBundle\Resolver\ResolverArgs;
-use Overblog\GraphQLBundle\Resolver\ResolverFactory;
 use Overblog\GraphQLBundle\Validator\InputValidator;
 use ReflectionMethod;
 use Symfony\Component\DependencyInjection\Compiler\CompilerPassInterface;
@@ -21,7 +19,6 @@ use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Exception\InvalidArgumentException;
 use Symfony\Component\DependencyInjection\Exception\ServiceNotFoundException;
 use Symfony\Component\DependencyInjection\Reference;
-use Symfony\Component\ExpressionLanguage\Expression;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadataFactory;
 use function is_array;
 use function is_string;
@@ -63,22 +60,13 @@ class ResolveNamedArgumentsPass implements CompilerPassInterface
 
     private function createAnonymousResolverDefinitionForExpression(string $expressionString): Definition
     {
-        $requiredInputValidator = ExpressionLanguage::expressionContainsVar('validator', $expressionString);
-        $requiredInputValidatorErrors = ExpressionLanguage::expressionContainsVar('errors', $expressionString);
-
-        return (new Definition(Closure::class))
-            ->setFactory([new Reference(ResolverFactory::class), 'createResolver'])
+        return (new Definition(Resolver::class))
             ->setArguments([
-                new Definition(
-                    ResolverExpression::class,
-                    [new Definition(Expression::class, [$expressionString])]
-                ),
+                new Definition(ResolverExpression::class, [$expressionString]),
                 [
                     '$resolverArgs',
                     new Reference(GlobalVariables::class),
                     new Reference('overblog_graphql.expression_language'),
-                    $requiredInputValidator || $requiredInputValidatorErrors ? '$validator' : null,
-                    $requiredInputValidatorErrors ? '$errors' : null,
                 ],
             ])
         ;
@@ -115,8 +103,7 @@ class ResolveNamedArgumentsPass implements CompilerPassInterface
             }
         }
 
-        return (new Definition(Closure::class))
-            ->setFactory([new Reference(ResolverFactory::class), 'createResolver'])
+        return (new Definition(Resolver::class))
             ->setArguments([
                 $this->resolverReference($resolver, $resolverRef, $isStatic),
                 $this->resolveArgumentValues($container, $argumentMetadataFactory, $resolver, $bind, $configPath),

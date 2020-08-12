@@ -28,7 +28,7 @@ final class FieldValidationConfig
         return $this->config['class'] ?? [];
     }
 
-    public function getValidationGroups(): ?string
+    public function getValidationGroups(): ?array
     {
         return $this->config['validationGroups'] ?? null;
     }

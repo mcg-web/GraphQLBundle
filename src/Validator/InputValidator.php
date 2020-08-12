@@ -60,8 +60,6 @@ class InputValidator
 
     /**
      * @param string|array|null $groups
-     *
-     * @throws ArgumentsValidationException
      */
     public function createResolveErrors($groups = null): ResolveErrors
     {

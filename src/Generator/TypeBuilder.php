@@ -176,11 +176,6 @@ class TypeBuilder
             $configLoader->addItem('description', $description);
         }
 
-        // only by InputType (class level validation)
-        /*if (isset($validation)) {
-            $configLoader->addItem('validation', $this->buildValidationRules($validation));
-        }*/
-
         if (!empty($fields)) {
             $configLoader->addItem('fields', ArrowFunction::new(
                 Collection::map($fields, [$this, 'buildField'])
@@ -366,11 +361,6 @@ class TypeBuilder
         if (!empty($access) && is_string($access) && ExpressionLanguage::expressionContainsVar('object', $access)) {
             $field->addItem('useStrictAccess', false);
         }
-
-        /*if ('input-object' === $this->type && isset($validation)) {
-            $this->restructureInputValidationConfig($fieldConfig);
-            $field->addItem('validation', $this->buildValidationRules($fieldConfig['validation']));
-        }*/
 
         return $field;
     }
