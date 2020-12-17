@@ -18,24 +18,20 @@ use function is_object;
 final class MutationFieldResolver implements ResolverInterface, AliasedInterface
 {
     private PromiseAdapter $promiseAdapter;
-    private ArgumentFactory $argumentFactory;
 
-    public function __construct(PromiseAdapter $promiseAdapter, ArgumentFactory $argumentFactory)
+    public function __construct(PromiseAdapter $promiseAdapter)
     {
         $this->promiseAdapter = $promiseAdapter;
-        $this->argumentFactory = $argumentFactory;
     }
 
     /**
-     * @param mixed $context
+     * @param mixed $payload
      */
-    public function __invoke(ArgumentInterface $args, $context, ResolveInfo $info, Closure $mutateAndGetPayloadCallback): Promise
+    public function __invoke(ArgumentInterface $args, $payload): Promise
     {
-        $input = $this->argumentFactory->create($args['input']);
-
-        return $this->promiseAdapter->createFulfilled($mutateAndGetPayloadCallback($input, $context, $info))
-            ->then(function ($payload) use ($input) {
-                $this->setObjectOrArrayValue($payload, 'clientMutationId', $input['clientMutationId']);
+        return $this->promiseAdapter->createFulfilled($payload)
+            ->then(function ($payload) use ($args) {
+                $this->setObjectOrArrayValue($payload, 'clientMutationId', $args['input']['clientMutationId'] ?? null);
 
                 return $payload;
             });

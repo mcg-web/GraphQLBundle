@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Overblog\GraphQLBundle\Resolver;
 
 use InvalidArgumentException;
+use Overblog\GraphQLBundle\ExpressionLanguage\ResolverExpression;
 use RuntimeException;
 use function get_class;
 use function is_array;
@@ -19,6 +20,7 @@ final class Resolver
     /** @var callable */
     private $handler;
 
+    /** @var array<string,mixed> */
     private array $handlerArgs;
 
     /** @var callable[] */
@@ -28,11 +30,14 @@ final class Resolver
 
     private string $resolverArgsClass;
 
+    private bool $isExpressionHandler;
+
     public function __construct(callable $handler, array $handlerArgs, string $category = self::CATEGORY_RESOLVER)
     {
         $this->handler = $handler;
-        $this->handlerArgs = array_values($handlerArgs);
+        $this->handlerArgs = $handlerArgs;
         $this->initInvokerArgNamesForCategory($category);
+        $this->isExpressionHandler = $handler instanceof ResolverExpression;
     }
 
     public function addArgumentResolver(callable $resolver): self
@@ -59,7 +64,13 @@ final class Resolver
      */
     public function __invoke(...$invokerArgs)
     {
-        return ($this->handler)(...$this->resolveHandlerArgs(...$invokerArgs));
+        $resolvedArgs = $this->resolveHandlerArgs(...$invokerArgs);
+
+        if ($this->isExpressionHandler) {
+            return ($this->handler)($resolvedArgs);
+        } else {
+            return ($this->handler)(...array_values($resolvedArgs));
+        }
     }
 
     /**
@@ -83,18 +94,18 @@ final class Resolver
 
         // resolve args
         $resolvedHandlerArgs = [];
-        foreach ($this->handlerArgs as $argumentValue) {
+        foreach ($this->handlerArgs as $argumentName => $argumentValue) {
             if (is_string($argumentValue) && '$' === $argumentValue[0]) {
-                $argumentName = ltrim($argumentValue, '$');
-                if (isset($invokerNamedArgs[$argumentName])) {
-                    $resolvedHandlerArgs[] = $invokerNamedArgs[$argumentName];
-                } elseif (isset($resolvedArgs[$argumentName])) {
-                    $resolvedHandlerArgs[] = $resolvedArgs[$argumentName];
+                $resolvedArgumentName = ltrim($argumentValue, '$');
+                if (array_key_exists($resolvedArgumentName, $invokerNamedArgs)) {
+                    $resolvedHandlerArgs[$argumentName] = $invokerNamedArgs[$resolvedArgumentName];
+                } elseif (array_key_exists($resolvedArgumentName, $resolvedArgs)) {
+                    $resolvedHandlerArgs[$argumentName] = $resolvedArgs[$resolvedArgumentName];
                 } else {
-                    throw $this->resolverArgumentUnresolvable($argumentName);
+                    throw $this->resolverArgumentUnresolvable($resolvedArgumentName);
                 }
             } else {
-                $resolvedHandlerArgs[] = $argumentValue;
+                $resolvedHandlerArgs[$argumentName] = $argumentValue;
             }
         }
 

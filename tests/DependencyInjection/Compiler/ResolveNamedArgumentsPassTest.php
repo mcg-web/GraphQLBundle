@@ -11,6 +11,7 @@ use Overblog\GraphQLBundle\ExpressionLanguage\ResolverExpression;
 use Overblog\GraphQLBundle\Generator\Converter\ExpressionConverter;
 use Overblog\GraphQLBundle\Resolver\Resolver;
 use Overblog\GraphQLBundle\Tests\DependencyInjection\Compiler\fixtures\Foo;
+use Overblog\GraphQLBundle\Tests\Generator\TypeGenerator;
 use PHPUnit\Framework\TestCase;
 use stdClass;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -57,7 +58,6 @@ class ResolveNamedArgumentsPassTest extends TestCase
         $this->assertDefinition(
             $expectedDefinitionArgs,
             $this->container->getParameter('overblog_graphql_types.config')['foo']['config']['fields']['test']['resolver']['id'],
-            'createResolver'
         );
     }
 
@@ -76,15 +76,19 @@ class ResolveNamedArgumentsPassTest extends TestCase
         $this->processCompilerPass($configs);
         $this->assertDefinition(
             [
-                new Definition(ResolverExpression::class, [$expressionString]),
+                new Definition(
+                    ResolverExpression::class,
+                    [new Reference('overblog_graphql.expression_language'), $expressionString]
+                ),
                 [
-                    '$resolverArgs',
-                    new Reference(GlobalVariables::class),
-                    new Reference('overblog_graphql.expression_language'),
+                    'value' => '$value',
+                    'args' => '$args',
+                    'context' => '$context',
+                    'info' => '$info',
+                    TypeGenerator::GLOBAL_VARS => new Reference(GlobalVariables::class),
                 ],
             ],
             $this->container->getParameter('overblog_graphql_types.config')['foo']['config']['fields']['testExpression']['resolver']['id'],
-            'createResolver'
         );
     }
 
@@ -96,7 +100,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'valueWithTypehint',
             [
                 [Foo::class, 'valueWithTypehint'],
-                ['$value'],
+                ['value' => '$value'],
             ],
         ];
         yield [
@@ -104,7 +108,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'allNotOrder',
             [
                 [Foo::class, 'allNotOrder'],
-                ['$info', '$args', '$value'],
+                ['info' => '$info', 'args' => '$args', 'value' => '$value'],
             ],
         ];
         yield [
@@ -112,7 +116,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'infoTypehint',
             [
                 [Foo::class, 'infoTypehint'],
-                ['$info'],
+                ['test' => '$info'],
             ],
         ];
         yield [
@@ -120,7 +124,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'infoWithoutTypehint',
             [
                 [Foo::class, 'infoWithoutTypehint'],
-                ['$info'],
+                ['info' => '$info'],
             ],
         ];
         yield [
@@ -128,7 +132,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'defaultValue',
             [
                 [Foo::class, 'defaultValue'],
-                [[]],
+                ['default' => []],
             ],
         ];
         yield [
@@ -136,7 +140,7 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'staticMethod',
             [
                     Foo::class.'::staticMethod',
-                    ['$args'],
+                    ['args' => '$args'],
             ],
         ];
         yield [
@@ -152,12 +156,12 @@ class ResolveNamedArgumentsPassTest extends TestCase
             'injection',
             [
                 [Foo::class, 'injection'],
-                ['$value', new Reference(stdClass::class)],
+                ['value' => '$value', 'object' => new Reference(stdClass::class)],
             ],
         ];
     }
 
-    private function assertDefinition(array $expectedDefinitionArgs, string $resolverId, string $factoryMethod): void
+    private function assertDefinition(array $expectedDefinitionArgs, string $resolverId): void
     {
         $expectedDefinition = (new Definition(Resolver::class, $expectedDefinitionArgs))
             ->setPublic(true);

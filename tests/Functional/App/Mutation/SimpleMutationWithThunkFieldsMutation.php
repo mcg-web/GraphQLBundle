@@ -26,10 +26,13 @@ class SimpleMutationWithThunkFieldsMutation
         self::$hasMutate = false;
     }
 
-    public function mutate(ArgumentInterface $value): array
+    /**
+     * @param ArgumentInterface|array $input
+     */
+    public function mutate($input): array
     {
-        self::$hasMutate = true;
+         self::$hasMutate = true;
 
-        return ['result' => $value['inputData']];
+        return ['result' => $input['inputData']];
     }
 }

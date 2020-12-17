@@ -48,11 +48,10 @@ use function strtolower;
  */
 class TypeBuilder
 {
-    protected const CONSTRAINTS_NAMESPACE = "Symfony\Component\Validator\Constraints";
-    protected const DOCBLOCK_TEXT = 'THIS FILE WAS GENERATED AND SHOULD NOT BE EDITED MANUALLY.';
-    protected const BUILT_IN_TYPES = [Type::STRING, Type::INT, Type::FLOAT, Type::BOOLEAN, Type::ID];
+    private const DOCBLOCK_TEXT = 'THIS FILE WAS GENERATED AND SHOULD NOT BE EDITED MANUALLY.';
+    private const BUILT_IN_TYPES = [Type::STRING, Type::INT, Type::FLOAT, Type::BOOLEAN, Type::ID];
 
-    protected const EXTENDS = [
+    private const EXTENDS = [
         'object' => ObjectType::class,
         'input-object' => InputObjectType::class,
         'interface' => InterfaceType::class,
@@ -61,12 +60,12 @@ class TypeBuilder
         'custom-scalar' => CustomScalarType::class,
     ];
 
-    protected ExpressionConverter $expressionConverter;
-    protected PhpFile $file;
-    protected string $namespace;
-    protected array $config;
-    protected string $type;
-    protected string $globalVars = '$'.TypeGenerator::GLOBAL_VARS;
+    private ExpressionConverter $expressionConverter;
+    private PhpFile $file;
+    private string $namespace;
+    private array $config;
+    private string $type;
+    private string $globalVars = '$'.TypeGenerator::GLOBAL_VARS;
 
     public function __construct(ExpressionConverter $expressionConverter, string $namespace)
     {
@@ -110,7 +109,7 @@ class TypeBuilder
      *
      * @throws RuntimeException
      */
-    protected function buildType(string $typeDefinition)
+    private function buildType(string $typeDefinition)
     {
         $typeNode = Parser::parseType($typeDefinition);
 
@@ -124,7 +123,7 @@ class TypeBuilder
      *
      * @throws RuntimeException
      */
-    protected function wrapTypeRecursive($typeNode)
+    private function wrapTypeRecursive($typeNode)
     {
         switch ($typeNode->kind) {
             case NodeKind::NON_NULL_TYPE:
@@ -152,7 +151,7 @@ class TypeBuilder
         return $type;
     }
 
-    protected function buildConfigLoader(array $config): ArrowFunction
+    private function buildConfigLoader(array $config): ArrowFunction
     {
         /**
          * @var array         $fields
@@ -232,7 +231,7 @@ class TypeBuilder
      *
      * @throws GeneratorException
      */
-    protected function buildScalarCallback($callback, string $fieldName)
+    private function buildScalarCallback($callback, string $fieldName)
     {
         if (!is_callable($callback)) {
             throw new GeneratorException("Value of '$fieldName' is not callable.");
@@ -269,7 +268,7 @@ class TypeBuilder
      * @throws GeneratorException
      * @throws UnrecognizedValueTypeException
      */
-    protected function buildResolve($resolve, bool $isServiceId = false)
+    private function buildResolve($resolve, bool $isServiceId = false)
     {
         if (is_callable($resolve) && is_array($resolve)) {
             return Collection::numeric($resolve);
@@ -395,7 +394,7 @@ class TypeBuilder
      *
      * @return Closure|mixed
      */
-    protected function buildComplexity($complexity)
+    private function buildComplexity($complexity)
     {
         if ($this->expressionConverter->check($complexity)) {
             $expression = $this->expressionConverter->convert($complexity);
@@ -427,7 +426,7 @@ class TypeBuilder
      *
      * @return ArrowFunction|mixed
      */
-    protected function buildPublic($public)
+    private function buildPublic($public)
     {
         if ($this->expressionConverter->check($public)) {
             $expression = $this->expressionConverter->convert($public);
@@ -453,7 +452,7 @@ class TypeBuilder
      *
      * @return ArrowFunction|mixed
      */
-    protected function buildAccess($access)
+    private function buildAccess($access)
     {
         if ($this->expressionConverter->check($access)) {
             $expression = $this->expressionConverter->convert($access);
@@ -471,7 +470,7 @@ class TypeBuilder
      *
      * @return mixed|ArrowFunction
      */
-    protected function buildResolveType($resolveType)
+    private function buildResolveType($resolveType)
     {
         if ($this->expressionConverter->check($resolveType)) {
             $expression = $this->expressionConverter->convert($resolveType);

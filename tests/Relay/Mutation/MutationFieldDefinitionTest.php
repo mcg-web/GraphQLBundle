@@ -39,20 +39,6 @@ class MutationFieldDefinitionTest extends TestCase
         $this->definition->toMappingDefinition($config);
     }
 
-    public function testInvalidMutateAndGetPayloadString(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Cannot parse "mutateAndGetPayload" configuration string.');
-        $this->definition->toMappingDefinition(['mutateAndGetPayload' => 'Some invalid string']);
-    }
-
-    public function testInvalidMutateAndGetPayloadFormat(): void
-    {
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid format for "mutateAndGetPayload" configuration.');
-        $this->definition->toMappingDefinition(['mutateAndGetPayload' => 123]);
-    }
-
     public function validConfigurationProvider(): array
     {
         return [
@@ -67,7 +53,7 @@ class MutationFieldDefinitionTest extends TestCase
                         'type' => null,
                     ],
                 ],
-                'resolve' => '@=resolver(\'relay_mutation_field\', [args, context, info, mutateAndGetPayloadCallback(foobar)])',
+                'resolve' => '@=resolver(\'relay_mutation_field\', [args, foobar])',
             ]],
             'types set as string return expected type string' => [[
                 'payloadType' => 'foo',
@@ -80,7 +66,7 @@ class MutationFieldDefinitionTest extends TestCase
                         'type' => 'bar!',
                     ],
                 ],
-                'resolve' => '@=resolver(\'relay_mutation_field\', [args, context, info, mutateAndGetPayloadCallback(foobar)])',
+                'resolve' => '@=resolver(\'relay_mutation_field\', [args, foobar])',
             ]],
         ];
     }

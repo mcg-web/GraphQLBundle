@@ -4,26 +4,29 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Tests\ExpressionLanguage\ExpressionFunction\GraphQL;
 
-use Overblog\GraphQLBundle\ExpressionLanguage\Exception\EvaluatorIsNotAllowedException;
 use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionFunction\GraphQL\Mutation;
-use Overblog\GraphQLBundle\Tests\ExpressionLanguage\TestCase;
+use Overblog\GraphQLBundle\Resolver\MutationResolver;
 
-class MutationTest extends TestCase
+class MutationTest extends AbstractProxyResolverTest
 {
     protected function getFunctions()
     {
         return [new Mutation(), new Mutation('mut')];
     }
 
-    public function testEvaluatorThrowsException(): void
+    public function nameDataProvider(): iterable
     {
-        $this->expectException(EvaluatorIsNotAllowedException::class);
-        $this->expressionLanguage->evaluate('mutation()');
+        yield ['mutation'];
+        yield ['mut'];
     }
 
-    public function testEvaluatorThrowsExceptionByAlias(): void
+    protected function getOriginalClassName(): string
     {
-        $this->expectException(EvaluatorIsNotAllowedException::class);
-        $this->expressionLanguage->evaluate('mut()');
+        return MutationResolver::class;
+    }
+
+    protected function getGlobalVariableName(): string
+    {
+        return 'mutationResolver';
     }
 }

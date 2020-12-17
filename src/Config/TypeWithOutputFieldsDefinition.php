@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\Config;
 
-use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use Symfony\Component\Config\Definition\Builder\ArrayNodeDefinition;
 use Symfony\Component\Config\Definition\Builder\NodeDefinition;
 use function is_string;
@@ -19,6 +18,7 @@ abstract class TypeWithOutputFieldsDefinition extends TypeDefinition
         $node->isRequired()->requiresAtLeastOneElement();
 
         $prototype = $node->useAttributeAsKey('name', false)->prototype('array');
+        $this->resolverNormalization($prototype, 'resolver', 'resolve');
 
         /** @phpstan-ignore-next-line */
         $prototype
@@ -26,38 +26,6 @@ abstract class TypeWithOutputFieldsDefinition extends TypeDefinition
                 // Allow field type short syntax (Field: Type => Field: {type: Type})
                 ->ifTrue(fn ($options) => is_string($options))
                 ->then(fn ($options) => ['type' => $options])
-            ->end()
-            ->beforeNormalization()
-                ->ifTrue(fn ($options) => !empty($options['resolve']) && empty($options['resolver']))
-                ->then(function ($options) {
-                    if (is_callable($options['resolve'])) {
-                        if (is_array($options['resolve'])) {
-                            $options['resolver']['method'] = join('::', $options['resolve']);
-                        } else {
-                            $options['resolver']['method'] = $options['resolve'];
-                        }
-                    } elseif (is_string($options['resolve'])) {
-                        $options['resolver']['expression'] = ExpressionLanguage::stringHasTrigger($options['resolve']) ?
-                            ExpressionLanguage::unprefixExpression($options['resolve']) :
-                            json_encode($options['resolve']);
-                    } else {
-                        $options['resolver']['expression'] = json_encode($options['resolve']);
-                    }
-
-                    return $options;
-                })
-            ->end()
-            ->beforeNormalization()
-                ->ifTrue(fn ($options) => array_key_exists('resolve', $options))
-                ->then(function ($options) {
-                    unset($options['resolve']);
-
-                    return $options;
-                })
-            ->end()
-            ->validate()
-                ->ifTrue(fn (array $v) => !empty($v['resolver']) && !empty($v['resolve']))
-                ->thenInvalid('"resolver" and "resolve" should not be use together in "%s".')
             ->end()
 
             ->validate()

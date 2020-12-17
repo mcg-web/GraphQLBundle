@@ -34,7 +34,7 @@ class NodeFieldDefinitionTest extends TestCase
     /**
      * @dataProvider validConfigProvider
      */
-    public function testValidConfig(string $idFetcher, string $idFetcherCallbackArg, string $nodeInterfaceType = 'node'): void
+    public function testValidConfig(string $idFetcher, string $resolve, string $nodeInterfaceType = 'node'): void
     {
         $config = [
             'idFetcher' => $idFetcher,
@@ -46,7 +46,7 @@ class NodeFieldDefinitionTest extends TestCase
             'description' => 'Fetches an object given its ID',
             'type' => $nodeInterfaceType,
             'args' => ['id' => ['type' => 'ID!', 'description' => 'The ID of an object']],
-            'resolve' => '@=resolver(\'relay_node_field\', [args, context, info, idFetcherCallback('.$idFetcherCallbackArg.')])',
+            'resolve' => $resolve,
         ];
 
         $this->assertSame($expected, $this->definition->toMappingDefinition($config));
@@ -55,10 +55,10 @@ class NodeFieldDefinitionTest extends TestCase
     public function validConfigProvider(): array
     {
         return [
-            ['@=user.username', 'user.username'],
-            ['toto', 'toto'],
-            ['50', '50'],
-            ['@=user.id', 'user.id', 'NodeInterface'],
+            ['@=user.username', '@=user.username'],
+            ['@=toto', '@=toto'],
+            ['@=50', '@=50'],
+            ['@=user.id', '@=user.id', 'NodeInterface'],
         ];
     }
 }

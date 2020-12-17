@@ -9,4 +9,4 @@ PublicMutation:
             builderConfig:
               inputType: PublicAddUserInput
               payloadType: PublicAddUserPayload
-              mutateAndGetPayload: {"user":{"username":"user1"}}
+              mutateAndGetPayload: '@={"user":{"username":"user1"}}'

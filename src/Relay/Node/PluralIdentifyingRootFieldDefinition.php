@@ -6,6 +6,7 @@ namespace Overblog\GraphQLBundle\Relay\Node;
 
 use InvalidArgumentException;
 use Overblog\GraphQLBundle\Definition\Builder\MappingInterface;
+use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use function array_key_exists;
 use function is_string;
 use function json_encode;
@@ -35,29 +36,26 @@ final class PluralIdentifyingRootFieldDefinition implements MappingInterface
 
         $argName = $config['argName'];
 
-        return [
+        return $this->prependResolve([
             'type' => "[${config['outputType']}]",
             'args' => [$argName => ['type' => "[${config['inputType']}!]!"]],
-            'resolve' => sprintf(
-                "@=resolver('relay_plural_identifying_field', [args['$argName'], context, info, resolveSingleInputCallback(%s)])",
-                $this->cleanResolveSingleInput($config['resolveSingleInput'])
-            ),
-        ];
+        ], $config['resolveSingleInput']);
     }
 
     /**
-     * @param mixed $resolveSingleInput
-     *
-     * @return false|string
+     * @param array|string $resolveSingleInput
      */
-    private function cleanResolveSingleInput($resolveSingleInput)
+    private function prependResolve(array $config, $resolveSingleInput): array
     {
-        if (is_string($resolveSingleInput) && 0 === strpos($resolveSingleInput, '@=')) {
-            $cleanResolveSingleInput = substr($resolveSingleInput, 2);
+        if (is_string($resolveSingleInput) && ExpressionLanguage::stringHasTrigger($resolveSingleInput)) {
+            $config['resolve'] = sprintf(
+                "@=resolver('relay_plural_identifying_field', [args, context, info, %s])",
+                ExpressionLanguage::unprefixExpression($resolveSingleInput)
+            );
         } else {
-            $cleanResolveSingleInput = json_encode($resolveSingleInput);
+            // todo(mcg-web): deal with resolve when using DI syntax
         }
 
-        return $cleanResolveSingleInput;
+        return $config;
     }
 }

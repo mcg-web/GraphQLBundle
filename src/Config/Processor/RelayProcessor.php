@@ -54,13 +54,13 @@ final class RelayProcessor implements ProcessorInterface
                 /** @var MappingInterface $builder */
                 $builder = new $definitionBuilderClass();
 
-                $connectionDefinition = $builder->toMappingDefinition($config);
+                $definition = $builder->toMappingDefinition($config);
 
                 if (!empty($configInherits)) {
-                    $connectionDefinition[$name]['inherits'] = $configInherits;
+                    $definition[$name]['inherits'] = $configInherits;
                 }
 
-                $configs = array_replace($configs, $connectionDefinition);
+                $configs = array_replace($configs, $definition);
             }
         }
 

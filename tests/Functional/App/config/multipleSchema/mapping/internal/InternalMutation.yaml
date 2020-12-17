@@ -9,4 +9,4 @@ InternalMutation:
             builderConfig:
               inputType: PublicAddUserInput
               payloadType: InternalAddUserPayload
-              mutateAndGetPayload: {"user":{"username":"user1","email":"email1"}}
+              mutateAndGetPayload: '@={"user":{"username":"user1","email":"email1"}}'

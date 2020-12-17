@@ -38,8 +38,8 @@ class ResolverInputValidatorArgumentPass implements CompilerPassInterface
                         $requiredInputValidator = ExpressionLanguage::expressionContainsVar('validator', $field['resolver']['expression']);
                         $requiredInputValidatorErrors = ExpressionLanguage::expressionContainsVar('errors', $field['resolver']['expression']);
                         $handlerArgs = $resolverDefinition->getArgument(1);
-                        $handlerArgs[4] = $requiredInputValidator || $requiredInputValidatorErrors ? '$validator' : null;
-                        $handlerArgs[5] = $requiredInputValidatorErrors ? '$errors' : null;
+                        $handlerArgs['validator'] = $requiredInputValidator || $requiredInputValidatorErrors ? '$validator' : null;
+                        $handlerArgs['errors'] = $requiredInputValidatorErrors ? '$errors' : null;
                         $resolverDefinition->setArgument(1, $handlerArgs);
                     }
                     if (isset($typeValidationConfig['fields'][$fieldName])) {

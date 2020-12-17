@@ -6,12 +6,9 @@ namespace Overblog\GraphQLBundle\Relay\Mutation;
 
 use InvalidArgumentException;
 use Overblog\GraphQLBundle\Definition\Builder\MappingInterface;
-use function is_array;
-use function is_string;
-use function json_encode;
+use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
+use function rtrim;
 use function sprintf;
-use function strpos;
-use function substr;
 
 final class MutationFieldDefinition implements MappingInterface
 {
@@ -19,60 +16,53 @@ final class MutationFieldDefinition implements MappingInterface
 
     public function toMappingDefinition(array $config): array
     {
-        $mutateAndGetPayload = $this->cleanMutateAndGetPayload($config);
-
-        return [
+        return $this->prependResolve([
             'type' => $this->extractPayloadType($config),
             'args' => [
                 'input' => ['type' => $this->extractInputType($config)],
             ],
-            'resolve' => "@=resolver('relay_mutation_field', [args, context, info, mutateAndGetPayloadCallback($mutateAndGetPayload)])",
-        ];
-    }
-
-    private function cleanMutateAndGetPayload(array $config): string
-    {
-        $mutateAndGetPayload = $config[self::KEY_MUTATE_GET_PAYLOAD] ?? null;
-        $this->ensureValidMutateAndGetPayloadConfiguration($mutateAndGetPayload);
-
-        if (is_string($mutateAndGetPayload)) {
-            return substr($mutateAndGetPayload, 2);
-        }
-
-        return json_encode($mutateAndGetPayload);
+        ], $this->extractMutateAndGetPayload($config));
     }
 
     /**
-     * @param mixed $mutateAndGetPayload
-     *
-     * @throws InvalidArgumentException
+     * @param string|array $mutateAndGetPayload
      */
-    private function ensureValidMutateAndGetPayloadConfiguration($mutateAndGetPayload): void
+    private function prependResolve(array $config, $mutateAndGetPayload): array
     {
-        if (is_string($mutateAndGetPayload) && 0 === strpos($mutateAndGetPayload, '@=')) {
-            return;
+        if (is_string($mutateAndGetPayload) && ExpressionLanguage::stringHasTrigger($mutateAndGetPayload)) {
+            $mutateAndGetPayload = preg_replace(
+                '/\bvalue\b/',
+                'args[\'input\']',
+                ExpressionLanguage::unprefixExpression($mutateAndGetPayload)
+            );
+
+            $config['resolve'] = "@=resolver('relay_mutation_field', [args, $mutateAndGetPayload])";
+        } else {
+            // todo(mcg-web): deal with resolve when using DI syntax
         }
 
-        if (null === $mutateAndGetPayload) {
+        return $config;
+    }
+
+    /**
+     * @return string|array
+     */
+    private function extractMutateAndGetPayload(array $config)
+    {
+        if (empty($config[self::KEY_MUTATE_GET_PAYLOAD])) {
             throw new InvalidArgumentException(sprintf('Mutation "%s" config is required.', self::KEY_MUTATE_GET_PAYLOAD));
         }
 
-        if (is_string($mutateAndGetPayload)) {
-            throw new InvalidArgumentException(sprintf('Cannot parse "%s" configuration string.', self::KEY_MUTATE_GET_PAYLOAD));
-        }
-
-        if (!is_array($mutateAndGetPayload)) {
-            throw new InvalidArgumentException(sprintf('Invalid format for "%s" configuration.', self::KEY_MUTATE_GET_PAYLOAD));
-        }
+        return $config[self::KEY_MUTATE_GET_PAYLOAD];
     }
 
     private function extractPayloadType(array $config): ?string
     {
-        return isset($config['payloadType']) && is_string($config['payloadType']) ? $config['payloadType'] : null;
+        return is_string($config['payloadType'] ?? null) ? $config['payloadType'] : null;
     }
 
     private function extractInputType(array $config): ?string
     {
-        return isset($config['inputType']) && is_string($config['inputType']) ? $config['inputType'].'!' : null;
+        return is_string($config['inputType'] ?? null) ? rtrim($config['inputType'], '!').'!' : null;
     }
 }

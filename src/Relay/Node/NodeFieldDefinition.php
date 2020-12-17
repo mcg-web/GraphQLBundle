@@ -6,6 +6,7 @@ namespace Overblog\GraphQLBundle\Relay\Node;
 
 use InvalidArgumentException;
 use Overblog\GraphQLBundle\Definition\Builder\MappingInterface;
+use Overblog\GraphQLBundle\ExpressionLanguage\ExpressionLanguage;
 use function is_string;
 use function strpos;
 use function substr;
@@ -14,31 +15,33 @@ final class NodeFieldDefinition implements MappingInterface
 {
     public function toMappingDefinition(array $config): array
     {
-        if (!isset($config['idFetcher']) || !is_string($config['idFetcher'])) {
+        $config['idFetcher'] = $config['idFetcher'] ?? null;
+        if (!is_string($config['idFetcher']) && !is_array($config['idFetcher'])) {
             throw new InvalidArgumentException('Node "idFetcher" config is invalid.');
         }
 
-        $idFetcher = $this->cleanIdFetcher($config['idFetcher']);
         $nodeInterfaceType = isset($config['nodeInterfaceType']) && is_string($config['nodeInterfaceType']) ? $config['nodeInterfaceType'] : null;
 
-        return [
+        return $this->prependResolve([
             'description' => 'Fetches an object given its ID',
             'type' => $nodeInterfaceType,
             'args' => [
                 'id' => ['type' => 'ID!', 'description' => 'The ID of an object'],
             ],
-            'resolve' => "@=resolver('relay_node_field', [args, context, info, idFetcherCallback($idFetcher)])",
-        ];
+        ], $config['idFetcher']);
     }
 
-    private function cleanIdFetcher(string $idFetcher): string
+    /**
+     * @param string|array $idFetcher
+     */
+    private function prependResolve(array $config, $idFetcher): array
     {
-        $cleanIdFetcher = $idFetcher;
-
-        if (0 === strpos($idFetcher, '@=')) {
-            $cleanIdFetcher = substr($idFetcher, 2);
+        if (is_string($idFetcher) && ExpressionLanguage::stringHasTrigger($idFetcher)) {
+            $config['resolve'] = preg_replace('/\bvalue\b/', 'args[\'id\']', $idFetcher);
+        } else {
+            // todo(mcg-web): deal with resolve when using DI syntax
         }
 
-        return $cleanIdFetcher;
+        return $config;
     }
 }

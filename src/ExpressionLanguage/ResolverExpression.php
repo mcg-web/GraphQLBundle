@@ -4,65 +4,26 @@ declare(strict_types=1);
 
 namespace Overblog\GraphQLBundle\ExpressionLanguage;
 
-use Murtukov\PHPCodeGenerator\Closure;
-use Overblog\GraphQLBundle\Definition\GlobalVariables;
-use Overblog\GraphQLBundle\Error\ResolveErrors;
-use Overblog\GraphQLBundle\Generator\TypeGenerator;
-use Overblog\GraphQLBundle\Resolver\ResolverArgs;
-use Overblog\GraphQLBundle\Validator\InputValidator;
-use Symfony\Component\ExpressionLanguage\Expression;
-
 final class ResolverExpression
 {
-    private Expression $expression;
+    private ExpressionLanguage $expressionLanguage;
 
-    private ?string $compiledCode;
+    private string $expression;
 
-    /**
-     * @param Expression|string $expression
-     */
-    public function __construct($expression)
+    public function __construct(ExpressionLanguage $expressionLanguage, string $expression)
     {
-        $this->expression = $expression instanceof Expression ? $expression : new Expression($expression);
-        $this->compiledCode = null;
+        $this->expressionLanguage = $expressionLanguage;
+        $this->expression = $expression;
     }
 
     /**
      * @return mixed
      */
-    public function __invoke(
-        ResolverArgs $resolverArgs,
-        GlobalVariables $globalVariables,
-        ExpressionLanguage $expressionLanguage,
-        ?InputValidator $validator,
-        ?ResolveErrors $errors
-    ) {
-        if (null === $this->compiledCode) {
-            $compiledCode = $expressionLanguage->compile(
-                $this->expression,
-               [
-                   'value',
-                    'args',
-                    'context',
-                    'info',
-                    TypeGenerator::GLOBAL_VARS,
-                    'validator',
-                    'errors',
-                ]
-            );
-
-            $closure = Closure::new()
-                ->setStatic()
-                ->addArguments()
-                ->bindVars('resolverArgs', TypeGenerator::GLOBAL_VARS, 'validator', 'errors')
-                ->append('\\extract($resolverArgs->toArray(true))')
-                ->emptyLine()
-                ->append('return ', $compiledCode)
-            ;
-
-            $this->compiledCode = sprintf('return (%s)();', $closure->generate());
-        }
-
-        return eval($this->compiledCode);
+    public function __invoke(array $namedArguments)
+    {
+        return $this->expressionLanguage->evaluate(
+            $this->expression,
+            $namedArguments
+        );
     }
 }

@@ -9,6 +9,7 @@ use Overblog\GraphQLBundle\Definition\ArgumentInterface;
 use Overblog\GraphQLBundle\Definition\GlobalVariables;
 use Overblog\GraphQLBundle\Error\ResolveErrors;
 use Overblog\GraphQLBundle\ExpressionLanguage\ResolverExpression;
+use Overblog\GraphQLBundle\Generator\TypeGenerator;
 use Overblog\GraphQLBundle\Resolver\Resolver;
 use Overblog\GraphQLBundle\Resolver\ResolverArgs;
 use Overblog\GraphQLBundle\Validator\InputValidator;
@@ -25,6 +26,8 @@ use function is_string;
 
 class ResolveNamedArgumentsPass implements CompilerPassInterface
 {
+    private array $expressionResolverDefinitions;
+
     public function process(ContainerBuilder $container): void
     {
         $argumentMetadataFactory = new ArgumentMetadataFactory();
@@ -60,13 +63,20 @@ class ResolveNamedArgumentsPass implements CompilerPassInterface
 
     private function createAnonymousResolverDefinitionForExpression(string $expressionString): Definition
     {
+        if (!isset($this->expressionResolverDefinitions[$expressionString])) {
+            $this->expressionResolverDefinitions[$expressionString]
+                = new Definition(ResolverExpression::class, [new Reference('overblog_graphql.expression_language'), $expressionString]);
+        }
+
         return (new Definition(Resolver::class))
             ->setArguments([
-                new Definition(ResolverExpression::class, [$expressionString]),
+                $this->expressionResolverDefinitions[$expressionString],
                 [
-                    '$resolverArgs',
-                    new Reference(GlobalVariables::class),
-                    new Reference('overblog_graphql.expression_language'),
+                    'value' => '$value',
+                    'args' => '$args',
+                    'context' => '$context',
+                    'info' => '$info',
+                    TypeGenerator::GLOBAL_VARS => new Reference(GlobalVariables::class),
                 ],
             ])
         ;
@@ -153,17 +163,17 @@ class ResolveNamedArgumentsPass implements CompilerPassInterface
         $arguments = $argumentMetadataFactory->createArgumentMetadata($resolver);
         foreach ($arguments as $i => $argument) {
             if (isset($default[$i])) { // arg position
-                $argumentValues[] = $default[$i];
+                $argumentValues[$argument->getName()] = $default[$i];
             } elseif (null !== $argument->getType() && isset($default[$argument->getType().' $'.$argument->getName()])) { // type and argument name
-                $argumentValues[] = $default[$argument->getType().' $'.$argument->getName()];
+                $argumentValues[$argument->getName()] = $default[$argument->getType().' $'.$argument->getName()];
             } elseif (null !== $argument->getType() && isset($default[$argument->getType()])) { // typehint instance of
-                $argumentValues[] = $default[$argument->getType()];
+                $argumentValues[$argument->getName()] = $default[$argument->getType()];
             } elseif (isset($default['$'.$argument->getName()])) { // default values (graphql arguments)
-                $argumentValues[] = $default['$'.$argument->getName()];
+                $argumentValues[$argument->getName()] = $default['$'.$argument->getName()];
             } elseif (null !== $argument->getType() && $container->has($argument->getType())) { // service
-                $argumentValues[] = new Reference($argument->getType());
+                $argumentValues[$argument->getName()] = new Reference($argument->getType());
             } elseif ($argument->hasDefaultValue() || (null !== $argument->getType() && $argument->isNullable() && !$argument->isVariadic())) { // default value from signature
-                $argumentValues[] = $argument->hasDefaultValue() ? $argument->getDefaultValue() : null;
+                $argumentValues[$argument->getName()] = $argument->hasDefaultValue() ? $argument->getDefaultValue() : null;
             } else {
                 $representative = $resolver;
 
