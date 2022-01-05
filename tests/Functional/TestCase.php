@@ -45,8 +45,8 @@ abstract class TestCase extends WebTestCase
      */
     protected static function createKernel(array $options = []): KernelInterface
     {
-        if (null === static::$class) {
-            static::$class = static::getKernelClass();
+        if (null === self::$class) {
+            self::$class = self::getKernelClass();
         }
 
         $options['test_case'] ??= '';
@@ -54,7 +54,7 @@ abstract class TestCase extends WebTestCase
         $env = $options['environment'] ?? 'test'.strtolower($options['test_case']);
         $debug = $options['debug'] ?? true;
 
-        return new static::$class($env, $debug, $options['test_case']);
+        return new self::$class($env, $debug, $options['test_case']);
     }
 
     /**
@@ -68,7 +68,7 @@ abstract class TestCase extends WebTestCase
 
     protected function tearDown(): void
     {
-        static::ensureKernelShutdown();
+        self::ensureKernelShutdown();
     }
 
     protected static function executeGraphQLRequest(string $query, array $rootValue = [], string $schemaName = null): array
@@ -77,16 +77,16 @@ abstract class TestCase extends WebTestCase
         $request->query->set('query', $query);
 
         // @phpstan-ignore-next-line
-        $req = static::getContainer()->get('overblog_graphql.request_parser')->parse($request);
+        $req = self::getContainer()->get('overblog_graphql.request_parser')->parse($request);
         // @phpstan-ignore-next-line
-        $res = static::getContainer()->get('overblog_graphql.request_executor')->execute($schemaName, $req, $rootValue);
+        $res = self::getContainer()->get('overblog_graphql.request_executor')->execute($schemaName, $req, $rootValue);
 
         return $res->toArray();
     }
 
     protected static function assertGraphQL(string $query, array $expectedData = null, array $expectedErrors = null, array $rootValue = [], string $schemaName = null): void
     {
-        $result = static::executeGraphQLRequest($query, $rootValue, $schemaName);
+        $result = self::executeGraphQLRequest($query, $rootValue, $schemaName);
 
         $expected = [];
 
@@ -98,18 +98,18 @@ abstract class TestCase extends WebTestCase
             $expected['data'] = $expectedData;
         }
 
-        static::assertSame($expected, $result, json_encode($result));
+        self::assertSame($expected, $result, json_encode($result));
     }
 
     protected static function getContainer(): ContainerInterface
     {
         /** @phpstan-ignore-next-line */
-        return static::$kernel->getContainer();
+        return self::$kernel->getContainer();
     }
 
     protected static function query(string $query, string $username, string $testCase, string $password = self::DEFAULT_PASSWORD): KernelBrowser
     {
-        $client = static::createClientAuthenticated($username, $testCase, $password);
+        $client = self::createClientAuthenticated($username, $testCase, $password);
         $client->request('GET', '/', ['query' => $query]);
 
         return $client;
@@ -117,8 +117,8 @@ abstract class TestCase extends WebTestCase
 
     protected static function createClientAuthenticated(?string $username, string $testCase, ?string $password = self::DEFAULT_PASSWORD): KernelBrowser
     {
-        static::ensureKernelShutdown();
-        $client = static::createClient(['test_case' => $testCase]);
+        self::ensureKernelShutdown();
+        $client = self::createClient(['test_case' => $testCase]);
 
         if (null !== $username) {
             $client->setServerParameters([
@@ -135,7 +135,7 @@ abstract class TestCase extends WebTestCase
         $client = self::createClientAuthenticated($username, $testCase, $password);
         $result = self::sendRequest($client, $query, false, $variables);
 
-        static::assertSame($expected, json_decode($result, true), $result);
+        self::assertSame($expected, json_decode($result, true), $result);
 
         return $client;
     }

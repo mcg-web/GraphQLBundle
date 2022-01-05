@@ -117,10 +117,10 @@ final class TypeBuilder
 
         $class = $this->file->createClass($config['class_name'])
             ->setFinal()
-            ->setExtends(static::EXTENDS[$type])
+            ->setExtends(self::EXTENDS[$type])
             ->addImplements(GeneratedTypeInterface::class, AliasedInterface::class)
             ->addConst('NAME', $config['name'])
-            ->setDocBlock(static::DOCBLOCK_TEXT);
+            ->setDocBlock(self::DOCBLOCK_TEXT);
 
         $class->emptyLine();
 
@@ -191,7 +191,7 @@ final class TypeBuilder
                 $this->file->addUse(Type::class);
                 break;
             default: // NodeKind::NAMED_TYPE
-                if (in_array($typeNode->name->value, static::BUILT_IN_TYPES)) {
+                if (in_array($typeNode->name->value, self::BUILT_IN_TYPES)) {
                     $name = strtolower($typeNode->name->value);
                     $type = Literal::new("Type::$name()");
                     $this->file->addUse(Type::class);
@@ -616,8 +616,8 @@ final class TypeBuilder
                 $instance = Instance::new("@\\$fqcn");
             } else {
                 // Symfony constraint
-                $fqcn = static::CONSTRAINTS_NAMESPACE."\\$name";
-                $this->file->addUse(static::CONSTRAINTS_NAMESPACE.' as SymfonyConstraints');
+                $fqcn = self::CONSTRAINTS_NAMESPACE."\\$name";
+                $this->file->addUse(self::CONSTRAINTS_NAMESPACE.' as SymfonyConstraints');
                 $instance = Instance::new("@SymfonyConstraints\\$name");
             }
 

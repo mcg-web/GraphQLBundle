@@ -12,7 +12,7 @@ final class ExceptionTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'exception']);
+        self::bootKernel(['test_case' => 'exception']);
     }
 
     public function testExceptionIsMappedToAWarning(): void

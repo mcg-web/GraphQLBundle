@@ -16,7 +16,7 @@ final class GlobalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        static::bootKernel(['test_case' => 'global']);
+        self::bootKernel(['test_case' => 'global']);
     }
 
     public function testGlobalIdFields(): void

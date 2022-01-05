@@ -23,9 +23,9 @@ final class ValidateCommandTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        static::bootKernel(['test_case' => 'validation']);
+        self::bootKernel(['test_case' => 'validation']);
 
-        $this->command = static::$kernel->getContainer()->get(ValidateCommand::class);
+        $this->command = self::$kernel->getContainer()->get(ValidateCommand::class);
         $this->commandTester = new CommandTester($this->command);
     }
 

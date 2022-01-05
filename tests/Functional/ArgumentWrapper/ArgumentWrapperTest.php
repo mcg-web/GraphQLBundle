@@ -10,7 +10,7 @@ final class ArgumentWrapperTest extends TestCase
 {
     protected function setUp(): void
     {
-        static::bootKernel(['test_case' => 'argumentWrapper']);
+        self::bootKernel(['test_case' => 'argumentWrapper']);
     }
 
     public function testQuery(): void

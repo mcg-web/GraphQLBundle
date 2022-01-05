@@ -17,7 +17,7 @@ final class ConnectionTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'connection']);
+        self::bootKernel(['test_case' => 'connection']);
     }
 
     public function testIncludesConnectionAndEdgeFields(): void

@@ -21,7 +21,7 @@ final class InputValidatorTest extends TestCase
         if (!interface_exists(Reader::class)) {
             $this->markTestSkipped('Symfony validator component requires doctrine/annotations but it is not installed');
         }
-        static::bootKernel(['test_case' => 'validator']);
+        self::bootKernel(['test_case' => 'validator']);
     }
 
     public function testNoValidation(): void

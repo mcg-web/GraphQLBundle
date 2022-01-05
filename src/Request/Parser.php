@@ -36,12 +36,12 @@ final class Parser implements ParserInterface
 
         switch ($contentType) {
             // Plain string
-            case static::CONTENT_TYPE_GRAPHQL:
-                $parsedBody = [static::PARAM_QUERY => $body];
+            case self::CONTENT_TYPE_GRAPHQL:
+                $parsedBody = [self::PARAM_QUERY => $body];
                 break;
 
             // JSON object
-            case static::CONTENT_TYPE_JSON:
+            case self::CONTENT_TYPE_JSON:
                 if (empty($body)) {
                     if (Request::METHOD_GET === $method) {
                         $parsedBody = [];
@@ -58,11 +58,11 @@ final class Parser implements ParserInterface
                 break;
 
             // URL-encoded query-string
-            case static::CONTENT_TYPE_FORM:
+            case self::CONTENT_TYPE_FORM:
                 $parsedBody = $request->request->all();
                 break;
 
-            case static::CONTENT_TYPE_FORM_DATA:
+            case self::CONTENT_TYPE_FORM_DATA:
                 $parsedBody = $this->handleUploadedFiles($request->request->all(), $request->files->all());
                 break;
 
@@ -81,9 +81,9 @@ final class Parser implements ParserInterface
     {
         // Add default request parameters
         $data = array_filter($data) + [
-                static::PARAM_QUERY => null,
-                static::PARAM_VARIABLES => null,
-                static::PARAM_OPERATION_NAME => null,
+                self::PARAM_QUERY => null,
+                self::PARAM_VARIABLES => null,
+                self::PARAM_OPERATION_NAME => null,
             ];
 
         // Use all query parameters, since starting from Symfony 6 there will be an exception accessing array parameters
@@ -91,9 +91,9 @@ final class Parser implements ParserInterface
         $queryParameters = $request->query->all();
 
         // Override request using query-string parameters
-        $query = $queryParameters[static::PARAM_QUERY] ?? $data[static::PARAM_QUERY];
-        $variables = $queryParameters[static::PARAM_VARIABLES] ?? $data[static::PARAM_VARIABLES];
-        $operationName = $queryParameters[static::PARAM_OPERATION_NAME] ?? $data[static::PARAM_OPERATION_NAME];
+        $query = $queryParameters[self::PARAM_QUERY] ?? $data[self::PARAM_QUERY];
+        $variables = $queryParameters[self::PARAM_VARIABLES] ?? $data[self::PARAM_VARIABLES];
+        $operationName = $queryParameters[self::PARAM_OPERATION_NAME] ?? $data[self::PARAM_OPERATION_NAME];
 
         // `query` parameter is mandatory.
         if (empty($query)) {
@@ -111,9 +111,9 @@ final class Parser implements ParserInterface
         }
 
         return [
-            static::PARAM_QUERY => $query,
-            static::PARAM_VARIABLES => $variables,
-            static::PARAM_OPERATION_NAME => $operationName,
+            self::PARAM_QUERY => $query,
+            self::PARAM_VARIABLES => $variables,
+            self::PARAM_OPERATION_NAME => $operationName,
         ];
     }
 }

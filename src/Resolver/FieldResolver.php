@@ -28,7 +28,7 @@ final class FieldResolver
     public function __invoke($parentValue, $args, $context, ResolveInfo $info)
     {
         $fieldName = $info->fieldName;
-        $value = static::valueFromObjectOrArray($parentValue, $fieldName);
+        $value = self::valueFromObjectOrArray($parentValue, $fieldName);
 
         return $value instanceof Closure ? $value($parentValue, $args, $context, $info) : $value;
     }
@@ -45,7 +45,7 @@ final class FieldResolver
         }
 
         if (is_object($objectOrArray)) {
-            foreach (static::PREFIXES as $prefix) {
+            foreach (self::PREFIXES as $prefix) {
                 $method = $prefix.str_replace('_', '', $fieldName);
 
                 if (is_callable([$objectOrArray, $method])) {

@@ -253,7 +253,7 @@ final class ConnectionBuilder
             return '';
         }
 
-        return str_replace(static::PREFIX, '', $this->cursorEncoder->decode($cursor));
+        return str_replace(self::PREFIX, '', $this->cursorEncoder->decode($cursor));
     }
 
     private function createEdges(iterable $slice, int $startOffset): array

@@ -17,7 +17,7 @@ final class PluralTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'plural']);
+        self::bootKernel(['test_case' => 'plural']);
     }
 
     public function testNodeInterfaceAndFields(): void

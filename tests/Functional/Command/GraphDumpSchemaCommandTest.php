@@ -22,11 +22,11 @@ final class GraphDumpSchemaCommandTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        static::bootKernel(['test_case' => 'connection']);
+        self::bootKernel(['test_case' => 'connection']);
 
-        $command = static::$kernel->getContainer()->get(GraphQLDumpSchemaCommand::class);
+        $command = self::$kernel->getContainer()->get(GraphQLDumpSchemaCommand::class);
         $this->commandTester = new CommandTester($command);
-        $this->cacheDir = static::$kernel->getCacheDir();
+        $this->cacheDir = self::$kernel->getCacheDir();
     }
 
     /**

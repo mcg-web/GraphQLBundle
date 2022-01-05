@@ -12,7 +12,7 @@ final class DisableBuiltInMappingTest extends TestCase
 {
     protected function setUp(): void
     {
-        static::bootKernel(['test_case' => 'disableBuiltInMapping']);
+        self::bootKernel(['test_case' => 'disableBuiltInMapping']);
     }
 
     public function testPageInfoMustNotBePresent(): void

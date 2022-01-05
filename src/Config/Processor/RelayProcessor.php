@@ -26,7 +26,7 @@ final class RelayProcessor implements ProcessorInterface
 
     public static function process(array $configs): array
     {
-        foreach (static::RELAY_DEFINITION_MAPPING as $typeName => $definitionBuilderClass) {
+        foreach (self::RELAY_DEFINITION_MAPPING as $typeName => $definitionBuilderClass) {
             $configs = self::processRelayConfigs($typeName, $definitionBuilderClass, $configs);
         }
 

@@ -28,7 +28,7 @@ final class TypeGeneratorTest extends TestCase
         $this->assertSame(
             'Cannot query field "privateData" on type "ObjectWithPrivateField".',
             json_decode( // @phpstan-ignore-next-line
-                static::query(
+                self::query(
                     'query { object { name privateData } }',
                     self::USER_RYAN,
                     'public'
@@ -48,7 +48,7 @@ final class TypeGeneratorTest extends TestCase
         $this->assertSame(
             'Cannot query field "other" on type "ObjectWithPrivateField".',
             json_decode( // @phpstan-ignore-next-line
-                static::query(
+                self::query(
                     'query { object { name other } }',
                     self::USER_RYAN,
                     'public'
@@ -68,7 +68,7 @@ final class TypeGeneratorTest extends TestCase
         $this->expectExceptionMessage('Cascade validation cannot be applied to built-in types.');
 
         parent::setUp();
-        static::bootKernel(['test_case' => 'cascadeOnScalars']);
+        self::bootKernel(['test_case' => 'cascadeOnScalars']);
     }
 
     /**
@@ -81,7 +81,7 @@ final class TypeGeneratorTest extends TestCase
         $this->expectExceptionMessage("Constraint class 'Symfony\Component\Validator\Constraints\BlahBlah' doesn't exist.");
 
         parent::setUp();
-        static::bootKernel(['test_case' => 'nonexistentConstraint']);
+        self::bootKernel(['test_case' => 'nonexistentConstraint']);
     }
 
     /**
@@ -94,7 +94,7 @@ final class TypeGeneratorTest extends TestCase
         $this->expectExceptionMessage('Unable to inject an instance of the InputValidator. No validation constraints provided. Please remove the "validator" argument from the list of dependencies of your resolver or provide validation configs.');
 
         parent::setUp();
-        static::bootKernel(['test_case' => 'validatorWithoutConstraints']);
+        self::bootKernel(['test_case' => 'validatorWithoutConstraints']);
     }
 
     /**
@@ -112,7 +112,7 @@ final class TypeGeneratorTest extends TestCase
         }
 
         parent::setUp();
-        $kernel = static::bootKernel(['test_case' => 'conflictingValidatorNamespaces']);
+        $kernel = self::bootKernel(['test_case' => 'conflictingValidatorNamespaces']);
 
         // this is the part is why we must make this test run in separate process
         $query = <<<'EOF'
@@ -121,7 +121,7 @@ final class TypeGeneratorTest extends TestCase
             }
             EOF;
 
-        $response = static::query(
+        $response = self::query(
             $query,
             self::USER_RYAN,
             'conflictingValidatorNamespaces'

@@ -19,7 +19,7 @@ final class NodeTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'node']);
+        self::bootKernel(['test_case' => 'node']);
     }
 
     public function testNodeInterfaceAndFields(): void

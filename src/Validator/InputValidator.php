@@ -94,9 +94,9 @@ final class InputValidator
     private function mergeClassValidation(): array
     {
         /** @phpstan-ignore-next-line */
-        $common = static::normalizeConfig($this->info->parentType->config['validation'] ?? []);
+        $common = self::normalizeConfig($this->info->parentType->config['validation'] ?? []);
         /** @phpstan-ignore-next-line */
-        $specific = static::normalizeConfig($this->info->fieldDefinition->config['validation'] ?? []);
+        $specific = self::normalizeConfig($this->info->fieldDefinition->config['validation'] ?? []);
 
         return array_filter([
             'link' => $specific['link'] ?? $common['link'] ?? null,
@@ -137,7 +137,7 @@ final class InputValidator
 
         foreach ($fields as $name => $arg) {
             $property = $arg['name'] ?? $name;
-            $config = static::normalizeConfig($arg['validation'] ?? []);
+            $config = self::normalizeConfig($arg['validation'] ?? []);
 
             if (isset($config['cascade']) && isset($inputData[$property])) {
                 $groups = $config['cascade'];
@@ -146,7 +146,7 @@ final class InputValidator
                 /** @var ObjectType|InputObjectType $type */
                 $type = Type::getNamedType($argType);
 
-                if (static::isListOfType($argType)) {
+                if (self::isListOfType($argType)) {
                     $rootObject->$property = $this->createCollectionNode($inputData[$property], $type, $rootObject);
                 } else {
                     $rootObject->$property = $this->createObjectNode($inputData[$property], $type, $rootObject);
@@ -163,7 +163,7 @@ final class InputValidator
                 $rootObject->$property = $inputData[$property] ?? null;
             }
 
-            $config = static::normalizeConfig($config);
+            $config = self::normalizeConfig($config);
 
             foreach ($config as $key => $value) {
                 switch ($key) {
@@ -230,7 +230,7 @@ final class InputValidator
     private function createObjectNode(array $value, ObjectType|InputObjectType $type, ValidationNode $parent): ValidationNode
     {
         /** @phpstan-ignore-next-line */
-        $classValidation = static::normalizeConfig($type->config['validation'] ?? []);
+        $classValidation = self::normalizeConfig($type->config['validation'] ?? []);
 
         return $this->buildValidationTree(
             new ValidationNode($type, null, $parent, $this->resolverArgs),
@@ -242,7 +242,7 @@ final class InputValidator
 
     private function applyClassValidation(ObjectMetadata $metadata, array $rules): void
     {
-        $rules = static::normalizeConfig($rules);
+        $rules = self::normalizeConfig($rules);
 
         foreach ($rules as $key => $value) {
             switch ($key) {

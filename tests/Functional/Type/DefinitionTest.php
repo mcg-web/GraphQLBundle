@@ -15,7 +15,7 @@ final class DefinitionTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'definition']);
+        self::bootKernel(['test_case' => 'definition']);
     }
 
     public function testDefinesEnumTypeWithDeprecatedValue(): void

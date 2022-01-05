@@ -53,7 +53,7 @@ final class AclConfigProcessor implements ConfigProcessorInterface
             $config['fields'] = function () use ($config) {
                 $fields = $config['fields']();
 
-                return static::acl($fields, $this->accessResolver, $this->defaultResolver);
+                return self::acl($fields, $this->accessResolver, $this->defaultResolver);
             };
         }
 

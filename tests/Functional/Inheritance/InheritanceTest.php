@@ -16,8 +16,8 @@ final class InheritanceTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'inheritance']);
-        $this->config = (array) static::$kernel->getContainer()->getParameter('overblog_graphql_types.config');
+        self::bootKernel(['test_case' => 'inheritance']);
+        $this->config = (array) self::$kernel->getContainer()->getParameter('overblog_graphql_types.config');
     }
 
     public function testObjectInheritance(): void

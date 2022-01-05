@@ -23,16 +23,16 @@ final class CompileCommandTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        static::bootKernel(['test_case' => 'generatorCommand']);
+        self::bootKernel(['test_case' => 'generatorCommand']);
 
-        $command = static::$kernel->getContainer()->get(CompileCommand::class);
+        $command = self::$kernel->getContainer()->get(CompileCommand::class);
 
         // @phpstan-ignore-next-line
-        $this->typesMapping = static::$kernel->getContainer()->get('overblog_graphql.cache_compiler')
+        $this->typesMapping = self::$kernel->getContainer()->get('overblog_graphql.cache_compiler')
             ->compile(TypeGenerator::MODE_MAPPING_ONLY);
 
         /** @var TypeGenerator $generator */
-        $generator = static::$kernel->getContainer()->get('overblog_graphql.cache_compiler');
+        $generator = self::$kernel->getContainer()->get('overblog_graphql.cache_compiler');
         $this->cacheDir = $generator->getCacheDirOrDefault();
         $this->commandTester = new CommandTester($command);
     }

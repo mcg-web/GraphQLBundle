@@ -17,7 +17,7 @@ final class MutationTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'mutation']);
+        self::bootKernel(['test_case' => 'mutation']);
     }
 
     public function testRequiresAnArgument(): void

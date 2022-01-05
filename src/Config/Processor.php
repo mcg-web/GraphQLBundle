@@ -28,7 +28,7 @@ final class Processor implements ProcessorInterface
     public static function process(array $configs, int $type = self::NORMALIZATION): array
     {
         /** @var ProcessorInterface $processor */
-        foreach (static::PROCESSORS[$type] as $processor) {
+        foreach (self::PROCESSORS[$type] as $processor) {
             $configs = $processor::process($configs);
         }
 

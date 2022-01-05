@@ -53,7 +53,7 @@ final class ExpressionLanguage extends BaseExpressionLanguage
      */
     public static function expressionContainsVar(string $name, $expression): bool
     {
-        foreach (static::extractExpressionVarNames($expression) as $varName) {
+        foreach (self::extractExpressionVarNames($expression) as $varName) {
             if ($name === $varName) {
                 return true;
             }

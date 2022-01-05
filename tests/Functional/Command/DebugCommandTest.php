@@ -22,9 +22,9 @@ final class DebugCommandTest extends TestCase
     public function setUp(): void
     {
         parent::setUp();
-        static::bootKernel(['test_case' => 'mutation']);
+        self::bootKernel(['test_case' => 'mutation']);
 
-        $command = static::$kernel->getContainer()->get(DebugCommand::class);
+        $command = self::$kernel->getContainer()->get(DebugCommand::class);
         $this->commandTester = new CommandTester($command);
 
         foreach (DebugCommand::getCategories() as $category) {

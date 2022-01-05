@@ -48,7 +48,7 @@ final class MultipleQueriesTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'multipleQueries']);
+        self::bootKernel(['test_case' => 'multipleQueries']);
     }
 
     public function testRequiredFails(): void

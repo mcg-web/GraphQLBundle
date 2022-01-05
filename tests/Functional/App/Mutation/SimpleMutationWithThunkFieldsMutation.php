@@ -15,7 +15,7 @@ final class SimpleMutationWithThunkFieldsMutation
         $hasMutate = self::$hasMutate;
 
         if ($reset) {
-            static::resetHasMutate();
+            self::resetHasMutate();
         }
 
         return $hasMutate;

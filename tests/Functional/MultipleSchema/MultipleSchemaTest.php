@@ -13,7 +13,7 @@ final class MultipleSchemaTest extends TestCase
     {
         parent::setUp();
 
-        static::bootKernel(['test_case' => 'multipleSchema']);
+        self::bootKernel(['test_case' => 'multipleSchema']);
     }
 
     public function testPublicSchema(): void

@@ -21,7 +21,7 @@ final class GlobalId
      */
     public static function toGlobalId($type, $id): string
     {
-        return base64_encode(sprintf('%s%s%s', $type, static::SEPARATOR, $id));
+        return base64_encode(sprintf('%s%s%s', $type, self::SEPARATOR, $id));
     }
 
     /**
@@ -40,7 +40,7 @@ final class GlobalId
             return $decodeGlobalId;
         }
 
-        [$decodeGlobalId['type'], $decodeGlobalId['id']] = array_pad(explode(static::SEPARATOR, $unBasedGlobalId, 2), 2, null);
+        [$decodeGlobalId['type'], $decodeGlobalId['id']] = array_pad(explode(self::SEPARATOR, $unBasedGlobalId, 2), 2, null);
         // transform empty string to null
         foreach ($decodeGlobalId as &$v) {
             $v = '' === $v ? null : $v;

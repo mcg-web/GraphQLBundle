@@ -21,14 +21,14 @@ final class ConnectionBuilderFromPromisedTest extends AbstractConnectionBuilderT
 {
     public function testReturnsAllElementsWithoutFilters(): void
     {
-        $promise = call_user_func([static::getBuilder(), 'connectionFromPromisedArray'], $this->promisedLetters(), []);
+        $promise = call_user_func([self::getBuilder(), 'connectionFromPromisedArray'], $this->promisedLetters(), []);
         $expected = $this->getExpectedConnection($this->letters, false, false);
         $this->assertEqualsFromPromised($expected, $promise);
     }
 
     public function testRespectsASmallerFirst(): void
     {
-        $promise = call_user_func([static::getBuilder(), 'connectionFromPromisedArray'], $this->promisedLetters(), ['first' => 2]);
+        $promise = call_user_func([self::getBuilder(), 'connectionFromPromisedArray'], $this->promisedLetters(), ['first' => 2]);
         $expected = $this->getExpectedConnection(['A', 'B'], false, true);
         $this->assertEqualsFromPromised($expected, $promise);
     }
@@ -41,7 +41,7 @@ final class ConnectionBuilderFromPromisedTest extends AbstractConnectionBuilderT
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('This is not a valid promise.');
-        call_user_func([static::getBuilder(), 'connectionFromPromisedArray'], $invalidPromise, []);
+        call_user_func([self::getBuilder(), 'connectionFromPromisedArray'], $invalidPromise, []);
     }
 
     public function invalidPromiseDataProvider(): array
@@ -58,7 +58,7 @@ final class ConnectionBuilderFromPromisedTest extends AbstractConnectionBuilderT
     public function testRespectsASmallerFirstWhenSlicing(): void
     {
         $promise = call_user_func(
-            [static::getBuilder(), 'connectionFromPromisedArraySlice'],
+            [self::getBuilder(), 'connectionFromPromisedArraySlice'],
             $this->promisedLetters(['A', 'B', 'C']),
             ['first' => 2],
             [
@@ -78,7 +78,7 @@ final class ConnectionBuilderFromPromisedTest extends AbstractConnectionBuilderT
     {
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('This is not a valid promise.');
-        call_user_func([static::getBuilder(), 'connectionFromPromisedArraySlice'], $invalidPromise, [], []);
+        call_user_func([self::getBuilder(), 'connectionFromPromisedArraySlice'], $invalidPromise, [], []);
     }
 
     /**

@@ -51,7 +51,7 @@ final class SchemaLanguageTest extends TestCase
             ],
         ];
 
-        $this->assertResponse($query, $expected, static::ANONYMOUS_USER, 'schemaLanguage');
+        $this->assertResponse($query, $expected, self::ANONYMOUS_USER, 'schemaLanguage');
     }
 
     public function testQueryDirewolves(): void
@@ -73,7 +73,7 @@ final class SchemaLanguageTest extends TestCase
             ],
         ];
 
-        $this->assertResponse($query, $expected, static::ANONYMOUS_USER, 'schemaLanguage');
+        $this->assertResponse($query, $expected, self::ANONYMOUS_USER, 'schemaLanguage');
     }
 
     public function testQueryACharacter(): void
@@ -98,7 +98,7 @@ final class SchemaLanguageTest extends TestCase
             ],
         ];
 
-        $this->assertResponse($query, $expected, static::ANONYMOUS_USER, 'schemaLanguage');
+        $this->assertResponse($query, $expected, self::ANONYMOUS_USER, 'schemaLanguage');
     }
 
     public function testQueryHumanByDateOfBirth(): void
@@ -131,7 +131,7 @@ final class SchemaLanguageTest extends TestCase
             ],
         ];
 
-        $this->assertResponse($query, $expected, static::ANONYMOUS_USER, 'schemaLanguage');
+        $this->assertResponse($query, $expected, self::ANONYMOUS_USER, 'schemaLanguage');
     }
 
     public function testQueryHumanByDateOfBirthUsingVariables(): void
@@ -156,7 +156,7 @@ final class SchemaLanguageTest extends TestCase
             ],
         ];
 
-        $this->assertResponse($query, $expected, static::ANONYMOUS_USER, 'schemaLanguage', null, ['years' => ['288 AC']]);
+        $this->assertResponse($query, $expected, self::ANONYMOUS_USER, 'schemaLanguage', null, ['years' => ['288 AC']]);
     }
 
     public function testMutation(): void
@@ -174,6 +174,6 @@ final class SchemaLanguageTest extends TestCase
             ],
         ];
 
-        $this->assertResponse($query, $expected, static::ANONYMOUS_USER, 'schemaLanguage');
+        $this->assertResponse($query, $expected, self::ANONYMOUS_USER, 'schemaLanguage');
     }
 }

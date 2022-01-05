@@ -34,7 +34,7 @@ final class PublicFieldsFilterConfigProcessor implements ConfigProcessorInterfac
             $config['fields'] = function () use ($config) {
                 $fields = $config['fields']();
 
-                return static::filter($fields);
+                return self::filter($fields);
             };
         }
 

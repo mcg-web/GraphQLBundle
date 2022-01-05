@@ -13,7 +13,7 @@ final class HelloWordTest extends TestCase
 {
     protected function setUp(): void
     {
-        static::bootKernel(['test_case' => 'autoConfigure']);
+        self::bootKernel(['test_case' => 'autoConfigure']);
     }
 
     public function testQuery(): void

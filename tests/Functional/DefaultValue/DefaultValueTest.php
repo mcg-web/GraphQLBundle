@@ -10,7 +10,7 @@ final class DefaultValueTest extends TestCase
 {
     protected function setUp(): void
     {
-        static::bootKernel(['test_case' => 'defaultValue']);
+        self::bootKernel(['test_case' => 'defaultValue']);
     }
 
     public function testArgDefaultValue(): void
